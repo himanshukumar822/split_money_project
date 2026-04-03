@@ -9,15 +9,19 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
+  // ✅ FIXED VARIABLES
+  String? _userId;
   String? _token;
   String? _name;
   String? _email;
 
-  String? get token => _token;
-  String get name => _name ?? "User"; // ✅ safe getter
+  // ✅ GETTERS
+  String get userId => _userId ?? "";
+  String get token => _token ?? "";
+  String get name => _name ?? "User";
   String? get email => _email;
 
-  // 🔥 LOGIN (FIXED)
+  // 🔥 LOGIN
   Future<bool> login(
     String email,
     String password,
@@ -34,14 +38,16 @@ class AuthProvider extends ChangeNotifier {
       if (response["token"] != null && response["user"] != null) {
         final prefs = await SharedPreferences.getInstance();
 
-        _token = response["token"];
-
-        // 🔥 FIXED
         final user = response["user"];
+
+        // ✅ STORE DATA
+        _userId = user["_id"]; // ⭐ IMPORTANT
         _name = user["name"];
         _email = user["email"];
+        _token = response["token"];
 
-        // 💾 SAVE
+        // 💾 SAVE LOCALLY
+        await prefs.setString("userId", _userId!);
         await prefs.setString("token", _token!);
         await prefs.setString("email", _email!);
         await prefs.setString("name", _name!);
@@ -59,7 +65,7 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // 🔥 SIGNUP (GOOD, small improvement)
+  // 🔥 SIGNUP
   Future<Map<String, dynamic>?> signup(
     String name,
     String email,
@@ -99,29 +105,24 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  // 🔥 LOAD USER (FIXED)
+  // 🔥 LOAD USER
   Future<void> loadUser() async {
     final prefs = await SharedPreferences.getInstance();
 
+    _userId = prefs.getString("userId"); // ⭐ IMPORTANT
     _token = prefs.getString("token");
     _email = prefs.getString("email");
-
-    // ✅ Always fallback properly
     _name = prefs.getString("name") ?? "User";
-    if (_token == null || _token!.isEmpty) {
-      _token = null;
-    }
-
-    print("Loaded token: $_token"); // 🧪 debug
 
     notifyListeners();
   }
 
-  // 🔥 LOGOUT (GOOD)
+  // 🔥 LOGOUT
   Future<void> logout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
 
+    _userId = null;
     _token = null;
     _name = null;
     _email = null;
@@ -135,6 +136,7 @@ class AuthProvider extends ChangeNotifier {
     );
   }
 
+  // 🔥 UPDATE NAME
   Future<void> updateName(String newName) async {
     _name = newName;
 

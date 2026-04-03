@@ -1,8 +1,48 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:split_money/providers/group_provider.dart';
 import 'package:split_money/screens/creategroup_screen.dart';
+import 'package:split_money/providers/auth_provider.dart';
+import 'package:split_money/group_details/group_details_screen.dart';
 
-class GroupsScreen extends StatelessWidget {
+class GroupsScreen extends StatefulWidget {
   const GroupsScreen({super.key});
+
+  @override
+  State<GroupsScreen> createState() => _GroupsScreenState();
+}
+
+class _GroupsScreenState extends State<GroupsScreen> {
+  String userId = "";
+  String token = "";
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final groupProvider = Provider.of<GroupProvider>(context, listen: false);
+
+      String userId = auth.userId;
+      String token = auth.token;
+
+      print("Calling getGroups with userId: $userId");
+
+      groupProvider.getGroups(userId, token);
+    });
+
+    Future.microtask(() {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+
+      userId = auth.userId;
+      token = auth.token;
+
+      Provider.of<GroupProvider>(
+        context,
+        listen: false,
+      ).getGroups(userId, token);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,13 +85,6 @@ class GroupsScreen extends StatelessWidget {
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -61,9 +94,7 @@ class GroupsScreen extends StatelessWidget {
                     amount: "₹500",
                     color: Colors.redAccent,
                   ),
-
                   Container(height: 40, width: 1, color: Colors.white30),
-
                   _balanceItem(
                     title: "You get",
                     amount: "₹1200",
@@ -75,7 +106,6 @@ class GroupsScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // 🧾 RECENT GROUPS TITLE
             const Text(
               "Recent Groups",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -83,50 +113,67 @@ class GroupsScreen extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // 🔥 HORIZONTAL LIST
-            SizedBox(
-              height: 120,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  // ➕ CREATE NEW
-                  GestureDetector(
-                    onTap: () {
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (context) => const CreateGroupSheet(),
-                      );
-                    },
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 70,
-                          height: 70,
-                          decoration: const BoxDecoration(
-                            color: Colors.black,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.add,
-                            color: Colors.white,
-                            size: 30,
-                          ),
+            // 🔥 GROUP LIST (WRAP)
+            Expanded(
+              child: Consumer<GroupProvider>(
+                builder: (context, provider, child) {
+                  if (provider.isLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  return Wrap(
+                    spacing: 16,
+                    runSpacing: 16,
+                    children: [
+                      // ➕ CREATE BUTTON
+                      GestureDetector(
+                        onTap: () {
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) => const CreateGroupSheet(),
+                          );
+                        },
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 70,
+                              height: 70,
+                              decoration: const BoxDecoration(
+                                color: Colors.black,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.add,
+                                color: Colors.white,
+                                size: 30,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text("Create new"),
+                          ],
                         ),
-                        const SizedBox(height: 6),
-                        const Text("Create new"),
-                      ],
-                    ),
-                  ),
+                      ),
 
-                  const SizedBox(width: 16),
-
-                  // 📦 GROUP ITEMS
-                  _recentGroupItem("Goa"),
-                  _recentGroupItem("Beach"),
-                  _recentGroupItem("Trip"),
-                ],
+                      // 🔥 DYNAMIC GROUPS
+                      ...provider.groups.map((group) {
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => GroupDetailScreen(group: group),
+                              ),
+                            );
+                          },
+                          child: _recentGroupItem(group.name),
+                        );
+                        // ignore: unnecessary_to_list_in_spreads
+                      }).toList(),
+                    ],
+                  );
+                },
               ),
             ),
           ],
@@ -160,51 +207,48 @@ class GroupsScreen extends StatelessWidget {
     );
   }
 
-  // 📦 Recent Group Item
+  // 📦 Group Item
   Widget _recentGroupItem(String name) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 16),
-      child: Column(
-        children: [
-          Stack(
-            children: [
-              Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(Icons.luggage, size: 30),
+    return Column(
+      children: [
+        Stack(
+          children: [
+            Container(
+              width: 70,
+              height: 70,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.circular(16),
               ),
-
-              // ➕ small plus badge
-              Positioned(
-                right: 0,
-                top: 0,
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: Color(0xFF5A67D8),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.add, size: 16, color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          SizedBox(
-            width: 70,
-            child: Text(
-              name,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
+              child: const Icon(Icons.luggage, size: 30),
             ),
+
+            // 🔥 PLUS ICON TOP RIGHT
+            Positioned(
+              top: 4,
+              right: 4,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.add, size: 14, color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 6),
+        SizedBox(
+          width: 70,
+          child: Text(
+            name,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

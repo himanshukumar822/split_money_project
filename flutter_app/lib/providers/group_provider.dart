@@ -11,32 +11,36 @@ class GroupProvider with ChangeNotifier {
 
   final GroupServices _service = GroupServices();
 
-  Future<void> getGroups(String token) async {
+  // ✅ FIXED: add userId
+  Future<void> getGroups(String userId, String token) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      final data = await _service.fetchGroups(token);
+      final data = await _service.fetchGroups(userId, token);
+
+      print("Fetched groups: $data"); // ⭐ DEBUG
+
       _groups = data.map((g) => Group.fromJson(g)).toList();
     } catch (e) {
-      print(e);
+      print("ERROR FETCHING GROUPS: $e"); // ⭐ DEBUG
+    } finally {
+      _isLoading = false; // ⭐ VERY IMPORTANT
+      notifyListeners();
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
-  Future<bool> addGroup(String name, String token) async {
+  // ✅ FIXED: add userId + fix response
+  Future<bool> addGroup(String name, String userId, String token) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      final data = await _service.createGroup(name, token);
+      final data = await _service.createGroup(name, userId, token);
 
-      // Convert response to Group model
-      final newGroup = Group.fromJson(data);
+      // ⭐ FIXED (important)
+      final newGroup = Group.fromJson(data["group"]);
 
-      // Add to local list (important for UI update)
       _groups.add(newGroup);
 
       _isLoading = false;

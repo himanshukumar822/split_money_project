@@ -124,7 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   final prefs =
                                       await SharedPreferences.getInstance();
 
-                                  await prefs.setString('token', token!);
+                                  await prefs.setString('token', token);
 
                                   // 🔥 NEW FIX
                                   await prefs.setString(
