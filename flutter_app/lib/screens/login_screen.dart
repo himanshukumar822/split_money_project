@@ -119,13 +119,23 @@ class _LoginScreenState extends State<LoginScreen> {
                                 );
 
                                 if (success) {
-                                  String? token = authProvider
-                                      .token; // make sure you store it there
+                                  String? token = authProvider.token;
 
-                                  // ✅ SAVE TOKEN
                                   final prefs =
                                       await SharedPreferences.getInstance();
+
                                   await prefs.setString('token', token!);
+
+                                  // 🔥 NEW FIX
+                                  await prefs.setString(
+                                    'name',
+                                    authProvider.name,
+                                  );
+                                  await prefs.setString(
+                                    'email',
+                                    authProvider.email ?? "",
+                                  );
+
                                   Navigator.pushReplacement(
                                     context,
                                     MaterialPageRoute(

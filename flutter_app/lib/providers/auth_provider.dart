@@ -31,17 +31,17 @@ class AuthProvider extends ChangeNotifier {
 
       print("Login Response: $response");
 
-      if (response["token"] != null) {
+      if (response["token"] != null && response["user"] != null) {
         final prefs = await SharedPreferences.getInstance();
 
-        // ✅ PRIORITY: backend name → else keep old → else "User"
-        final existingName = prefs.getString("name");
-
-        _name = response["name"] ?? existingName ?? "User";
         _token = response["token"];
-        _email = email;
 
-        // 💾 SAVE EVERYTHING CLEANLY
+        // 🔥 FIXED
+        final user = response["user"];
+        _name = user["name"];
+        _email = user["email"];
+
+        // 💾 SAVE
         await prefs.setString("token", _token!);
         await prefs.setString("email", _email!);
         await prefs.setString("name", _name!);

@@ -18,9 +18,11 @@ class GroupsScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.add, color: Colors.black),
             onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => CreategroupScreen()),
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => const CreateGroupSheet(),
               );
             },
           ),
@@ -90,9 +92,11 @@ class GroupsScreen extends StatelessWidget {
                   // ➕ CREATE NEW
                   GestureDetector(
                     onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => CreategroupScreen()),
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => const CreateGroupSheet(),
                       );
                     },
                     child: Column(

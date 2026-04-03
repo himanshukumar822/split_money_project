@@ -1,28 +1,59 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:split_money/providers/auth_provider.dart';
 import 'package:split_money/screens/bottomnavi.dart/editprofile_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:split_money/screens/login_screen.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
+  State<ProfilePage> createState() => _ProfilePageState();
+}
 
+class _ProfilePageState extends State<ProfilePage> {
+  String name = "user";
+  String email = "";
+
+  @override
+  void initState() {
+    super.initState();
+    loadUserData();
+  }
+
+  // 🔥 LOAD USER DATA FROM STORAGE
+  void loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    setState(() {
+      name = prefs.getString('name') ?? "user";
+      email = prefs.getString('email') ?? "";
+    });
+  }
+
+  // 🔥 SAVE UPDATED NAME
+  Future<void> saveName(String newName) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('name', newName);
+
+    setState(() {
+      name = newName;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
+
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: const Icon(Icons.arrow_back, color: Colors.black),
         title: const Text("Account", style: TextStyle(color: Colors.black)),
       ),
+
       body: Column(
         children: [
-          // 🔵 Top Profile Section
+          // 🔵 PROFILE SECTION
           Container(
             padding: const EdgeInsets.all(20),
             child: Row(
@@ -32,12 +63,14 @@ class ProfilePage extends StatelessWidget {
                   backgroundColor: Color(0xFFE0E0E0),
                   child: Icon(Icons.person, size: 40, color: Colors.grey),
                 ),
+
                 const SizedBox(width: 15),
+
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      authProvider.name,
+                      name,
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -46,10 +79,7 @@ class ProfilePage extends StatelessWidget {
 
                     const SizedBox(height: 5),
 
-                    Text(
-                      authProvider.email ?? "",
-                      style: const TextStyle(color: Colors.grey),
-                    ),
+                    Text(email, style: const TextStyle(color: Colors.grey)),
                   ],
                 ),
               ],
@@ -58,7 +88,7 @@ class ProfilePage extends StatelessWidget {
 
           const SizedBox(height: 10),
 
-          // 🧩 Action Blocks
+          // ✏️ EDIT PROFILE
           _buildCard(
             icon: Icons.edit,
             title: "Edit Profile",
@@ -66,38 +96,34 @@ class ProfilePage extends StatelessWidget {
               final updatedName = await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => EditProfilePage(
-                    name: authProvider.name,
-                    email: authProvider.email ?? "",
-                  ),
+                  builder: (_) => EditProfilePage(name: name, email: email),
                 ),
               );
 
               if (updatedName != null) {
-                final authProvider = Provider.of<AuthProvider>(
-                  // ignore: use_build_context_synchronously
-                  context,
-                  listen: false,
-                );
-
-                authProvider.updateName(updatedName);
+                await saveName(updatedName);
               }
             },
           ),
+
+          // ⚙️ SETTINGS
           _buildCard(icon: Icons.settings, title: "Settings", onTap: () {}),
+
+          // 🚪 LOGOUT
           _buildCard(
             icon: Icons.logout,
             title: "Logout",
+            isLogout: true,
             onTap: () {
               _showLogoutDialog(context);
             },
-            isLogout: true,
           ),
         ],
       ),
     );
   }
 
+  // 🔥 LOGOUT DIALOG
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -109,29 +135,28 @@ class ProfilePage extends StatelessWidget {
           title: const Text("Logout"),
           content: const Text("Do you really want to logout?"),
           actions: [
+            // ❌ CANCEL
             TextButton(
-              onPressed: () async {
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.remove('token');
-
-                Navigator.pushReplacement(
-                  // ignore: use_build_context_synchronously
-                  context,
-                  MaterialPageRoute(builder: (_) => LoginScreen()),
-                ); // close dialog
+              onPressed: () {
+                Navigator.pop(context);
               },
               child: const Text("Cancel"),
             ),
+
+            // ✅ LOGOUT
             TextButton(
               onPressed: () async {
-                Navigator.pop(context); // close dialog first
+                Navigator.pop(context);
 
-                final authProvider = Provider.of<AuthProvider>(
+                final prefs = await SharedPreferences.getInstance();
+
+                // 🔥 CLEAR ALL DATA
+                await prefs.clear();
+
+                Navigator.pushReplacement(
                   context,
-                  listen: false,
+                  MaterialPageRoute(builder: (_) => LoginScreen()),
                 );
-
-                await authProvider.logout(context);
               },
               child: const Text("Logout", style: TextStyle(color: Colors.red)),
             ),
@@ -141,6 +166,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
+  // 🔧 CARD WIDGET
   Widget _buildCard({
     required IconData icon,
     required String title,
@@ -158,11 +184,7 @@ class ProfilePage extends StatelessWidget {
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
-              BoxShadow(
-                // ignore: deprecated_member_use
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 5,
-              ),
+              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5),
             ],
           ),
           child: Row(
