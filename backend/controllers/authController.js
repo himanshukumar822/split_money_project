@@ -25,7 +25,11 @@ const hashedPassword = await bcrypt.hash(password, 10);
 
     res.status(201).json({
       message: "User created successfully",
-      user
+        user: {
+    _id: user._id,
+    name: user.name,
+    email: user.email
+  }
     });
 
   } catch (error) {
@@ -65,7 +69,12 @@ exports.login = async (req, res) => {
 
     res.json({
       message: "Login successful",
-      token
+      token,
+        user: {
+    _id: user._id,
+    name: user.name,
+    email: user.email
+  }
     });
 
   } catch (error) {
