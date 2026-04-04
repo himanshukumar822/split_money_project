@@ -1,9 +1,17 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 //import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:split_money/screens/contact_screen.dart';
+import 'package:split_money/services/expense_services.dart';
+import 'package:split_money/providers/auth_provider.dart';
+import 'package:split_money/providers/group_provider.dart';
+import 'package:provider/provider.dart';
 
 class AddExpenseScreen extends StatefulWidget {
-  const AddExpenseScreen({super.key});
+  final String groupId;
+
+  const AddExpenseScreen({super.key, required this.groupId});
 
   @override
   State<AddExpenseScreen> createState() => _AddExpenseScreenState();
@@ -13,7 +21,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   List<Map<String, dynamic>> members = [
     {"name": "You", "isYou": true},
   ];
-
+  final ExpenseService expenseService = ExpenseService();
   String paidBy = "You";
 
   final TextEditingController descriptionController = TextEditingController();
@@ -172,10 +180,55 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                       color: Colors.black,
                     ),
                     child: TextButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Expense Added")),
-                        );
+                      onPressed: () async {
+                        try {
+                          final description = descriptionController.text;
+                          final amount =
+                              double.tryParse(amountController.text) ?? 0;
+
+                          if (description.isEmpty || amount <= 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Enter valid details"),
+                              ),
+                            );
+                            return;
+                          }
+
+                          // 👉 1. CALL YOUR EXPENSE API
+                          final auth = Provider.of<AuthProvider>(
+                            context,
+                            listen: false,
+                          );
+
+                          await expenseService.addExpense(
+                            description: description,
+                            amount: amount,
+                            paidBy: paidBy,
+                            members: members,
+                            token: auth.token, // ✅ ADD THIS
+                            groupId: widget.groupId, // ✅ ADD THIS
+                          );
+
+                          // 👉 2. GET AUTH DATA
+                          final auth1 = Provider.of<AuthProvider>(
+                            context,
+                            listen: false,
+                          );
+                          final userId = auth1.userId;
+                          final token = auth1.token;
+
+                          // 👉 3. REFRESH GROUP DATA 🔥 (MOST IMPORTANT)
+                          await Provider.of<GroupProvider>(
+                            context,
+                            listen: false,
+                          ).getGroups(userId, token);
+
+                          // 👉 4. GO BACK
+                          Navigator.pop(context);
+                        } catch (e) {
+                          print("Error: $e");
+                        }
                       },
                       child: const Padding(
                         padding: EdgeInsets.symmetric(vertical: 14),

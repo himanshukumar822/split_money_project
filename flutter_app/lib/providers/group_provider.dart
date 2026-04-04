@@ -31,7 +31,7 @@ class GroupProvider with ChangeNotifier {
   }
 
   // ✅ FIXED: add userId + fix response
-  Future<bool> addGroup(String name, String userId, String token) async {
+  Future<dynamic> addGroup(String name, String userId, String token) async {
     _isLoading = true;
     notifyListeners();
 
@@ -46,7 +46,7 @@ class GroupProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
 
-      return true;
+      return data["group"];
     } catch (e) {
       print(e);
       _isLoading = false;

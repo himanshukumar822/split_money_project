@@ -49,7 +49,10 @@ class _GroupDetailScreenState extends State<GroupDetailScreen>
           Expanded(
             child: TabBarView(
               controller: _tabController,
-              children: [ExpenseTab(), BalanceTab()],
+              children: [
+                ExpenseTab(groupId: widget.group.id),
+                BalanceTab(groupId: widget.group.id),
+              ],
             ),
           ),
         ],
@@ -60,7 +63,9 @@ class _GroupDetailScreenState extends State<GroupDetailScreen>
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => AddExpenseScreen()),
+            MaterialPageRoute(
+              builder: (_) => AddExpenseScreen(groupId: widget.group.id),
+            ),
           );
         },
         child: Icon(Icons.add),

@@ -177,21 +177,21 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
                         String token = auth.token;
 
                         print("Creating group with userId: $userId");
-
-                        bool success = await groupProvider.addGroup(
+                        final group = await groupProvider.addGroup(
                           groupName,
                           userId,
                           token,
                         );
 
-                        print("Group creation success: $success");
-                        if (success) {
+                        if (group != null) {
                           Navigator.pop(context);
 
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const AddExpenseScreen(),
+                              builder: (_) => AddExpenseScreen(
+                                groupId: group["_id"], // ✅ IMPORTANT
+                              ),
                             ),
                           );
                         }
