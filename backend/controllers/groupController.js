@@ -1,5 +1,24 @@
 const Group = require("../models/Group");
+const Activity = require("../models/activity");
+exports.getGroupById = async (req, res) => {
+  try {
+    const { groupId } = req.params;
 
+    const group = await Group.findById(groupId)
+      .populate("expenses");
+
+    if (!group) {
+      return res.status(404).json({
+        message: "Group not found"
+      });
+    }
+
+    res.json(group);
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 exports.createGroup = async (req, res) => {
   try {
 
@@ -12,7 +31,12 @@ exports.createGroup = async (req, res) => {
     });
 
     await group.save();
-
+    await Activity.create({
+  user: createdBy,
+  type: "GROUP_CREATED",
+  message: `Group "${name}" created`,
+  groupId: group._id
+});
     res.status(201).json({
       message: "Group created successfully",
       group
@@ -30,7 +54,7 @@ exports.getUserGroups = async (req, res) => {
 
     const groups = await Group.find({
       members: userId
-    });
+    }).populate("expenses");
 
     res.json({
       groups

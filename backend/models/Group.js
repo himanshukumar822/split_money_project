@@ -16,7 +16,15 @@ const groupSchema = new mongoose.Schema({
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User"
-  }
+  },
+
+  // ✅ ADD THIS
+  expenses: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Expense",
+    },
+  ],
 
 }, { timestamps: true });
 

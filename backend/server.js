@@ -18,6 +18,7 @@ app.use("/api/balances", balanceRoutes);
 app.get("/", (req, res) => {
   res.send("Split Money API Running");
 });
+app.use("/api/activity", require("./routes/activityRoutes"));
 
 const PORT = process.env.PORT || 5000;
 
