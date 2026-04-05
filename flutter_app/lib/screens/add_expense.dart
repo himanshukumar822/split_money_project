@@ -1,7 +1,6 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
-//import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:split_money/screens/contact_screen.dart';
 import 'package:split_money/services/expense_services.dart';
 import 'package:split_money/providers/auth_provider.dart';
@@ -21,6 +20,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   List<Map<String, dynamic>> members = [
     {"name": "You", "isYou": true},
   ];
+
   final ExpenseService expenseService = ExpenseService();
   String paidBy = "You";
 
@@ -45,7 +45,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // 👥 Add Friends + Members
+            /// 👥 MEMBERS
             Row(
               children: [
                 GestureDetector(
@@ -62,7 +62,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                         )) {
                           members.add({
                             "name": contact.displayName ?? "No Name",
-                            "contact": contact,
                             "isYou": false,
                           });
                         }
@@ -102,7 +101,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
             const SizedBox(height: 20),
 
-            // 📦 FORM CARD
+            /// 📦 FORM
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -127,12 +126,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
                   const SizedBox(height: 16),
 
+                  /// 👤 PAID BY
                   DropdownButtonFormField<String>(
                     value: paidBy,
                     items: members.map<DropdownMenuItem<String>>((member) {
                       return DropdownMenuItem<String>(
-                        value: member["name"] as String,
-                        child: Text(member["name"] as String),
+                        value: member["name"],
+                        child: Text(member["name"]),
                       );
                     }).toList(),
                     onChanged: (val) {
@@ -145,7 +145,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
                   const SizedBox(height: 20),
 
-                  // 🔀 Split Toggle
+                  /// 🔘 SPLIT TYPE
                   Row(
                     children: [
                       Expanded(
@@ -172,7 +172,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
                   const SizedBox(height: 20),
 
-                  // 🚀 Submit Button
+                  /// 🚀 SUBMIT BUTTON
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -195,39 +195,45 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                             return;
                           }
 
-                          // 👉 1. CALL YOUR EXPENSE API
                           final auth = Provider.of<AuthProvider>(
                             context,
                             listen: false,
                           );
 
+                          /// ✅ SIMPLE FIX → use NAME directly
+                          final paidByName = paidBy;
+
+                          final splitBetween = members
+                              .map((m) => m["name"])
+                              .toList();
+
                           await expenseService.addExpense(
                             description: description,
                             amount: amount,
-                            paidBy: paidBy,
-                            members: members,
-                            token: auth.token, // ✅ ADD THIS
-                            groupId: widget.groupId, // ✅ ADD THIS
+                            paidBy: paidByName, // ✅ NAME
+                            splitBetween: splitBetween, // ✅ NAMES
+                            token: auth.token,
+                            groupId: widget.groupId,
+                          );
+                          print("MEMBERS LIST: $members");
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Expense added successfully"),
+                            ),
                           );
 
-                          // 👉 2. GET AUTH DATA
-                          final auth1 = Provider.of<AuthProvider>(
-                            context,
-                            listen: false,
-                          );
-                          final userId = auth1.userId;
-                          final token = auth1.token;
-
-                          // 👉 3. REFRESH GROUP DATA 🔥 (MOST IMPORTANT)
                           await Provider.of<GroupProvider>(
                             context,
                             listen: false,
-                          ).getGroups(userId, token);
+                          ).getGroups(auth.userId, auth.token);
 
-                          // 👉 4. GO BACK
                           Navigator.pop(context);
                         } catch (e) {
                           print("Error: $e");
+
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text("Error: $e")));
                         }
                       },
                       child: const Padding(
@@ -248,7 +254,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     );
   }
 
-  // 🔘 Split Button
   Widget _splitButton(String text, bool active) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -264,7 +269,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     );
   }
 
-  // 💰 Equal Split UI
   Widget _buildEqualSplitUI() {
     double total = double.tryParse(amountController.text) ?? 0;
     int count = members.length;
@@ -317,7 +321,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     );
   }
 
-  // 👤 Member Chip
   Widget _memberChip(Map<String, dynamic> member) {
     return Stack(
       children: [

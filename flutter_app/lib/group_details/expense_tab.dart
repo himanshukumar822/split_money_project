@@ -1,57 +1,151 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/group_provider.dart';
+import 'package:intl/intl.dart';
+import '../services/expense_services.dart';
+import '../providers/auth_provider.dart';
 
-class ExpenseTab extends StatelessWidget {
+class ExpenseTab extends StatefulWidget {
   final String groupId;
 
   const ExpenseTab({super.key, required this.groupId});
 
   @override
+  State<ExpenseTab> createState() => _ExpenseTabState();
+}
+
+class _ExpenseTabState extends State<ExpenseTab> {
+  List expenses = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchExpenses();
+  }
+
+  Future<void> fetchExpenses() async {
+    try {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+
+      final data = await ExpenseService().getExpenses(
+        widget.groupId,
+        auth.token,
+      );
+
+      setState(() {
+        expenses = data; // ✅ already filtered from backend
+        isLoading = false;
+      });
+    } catch (e) {
+      print("Error fetching expenses: $e");
+      setState(() => isLoading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Consumer<GroupProvider>(
-      builder: (context, provider, child) {
-        final group = provider.groups.firstWhere((g) => g.id == groupId);
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-        final expenses = group.expenses ?? [];
+    if (expenses.isEmpty) {
+      return const Center(child: Text("No expenses yet"));
+    }
 
-        if (expenses.isEmpty) {
-          return const Center(child: Text("No expenses yet"));
-        }
+    return RefreshIndicator(
+      onRefresh: fetchExpenses,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: expenses.length,
+        itemBuilder: (context, index) {
+          final e = expenses[index];
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(12),
-          itemCount: expenses.length,
-          itemBuilder: (context, index) {
-            final e = expenses[index];
+          final paidByName = e["paidBy"] ?? "Unknown";
+          final isYouPaid = paidByName == "You";
 
-            return Card(
-              margin: const EdgeInsets.only(bottom: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: ListTile(
-                leading: const CircleAvatar(child: Icon(Icons.receipt)),
+          final date =
+              DateTime.tryParse(e["createdAt"] ?? "") ?? DateTime.now();
+          final formattedDate = DateFormat("dd MMM").format(date);
 
-                title: Text(
-                  e.description ?? "No description",
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                /// DATE
+                Column(
+                  children: [
+                    Text(formattedDate, style: const TextStyle(fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        "Expense",
+                        style: TextStyle(fontSize: 10),
+                      ),
+                    ),
+                  ],
                 ),
 
-                subtitle: Text("${e.paidBy['name']} paid ₹${e.amount}"),
+                const SizedBox(width: 12),
 
-                trailing: Text(
-                  "₹${(e.amount / (group.members.length)).toStringAsFixed(0)}",
-                  style: const TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
+                /// CARD
+                Expanded(
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 22,
+                        backgroundColor: Colors.orange.withOpacity(0.2),
+                        child: const Icon(Icons.receipt, color: Colors.orange),
+                      ),
+
+                      const SizedBox(width: 12),
+
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              e["description"] ?? "",
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              isYouPaid
+                                  ? "You paid ₹${e["amount"]}"
+                                  : "$paidByName paid ₹${e["amount"]}",
+                              style: TextStyle(color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      Text(
+                        "₹${e["amount"]}",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isYouPaid ? Colors.green : Colors.red,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            );
-          },
-        );
-      },
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }

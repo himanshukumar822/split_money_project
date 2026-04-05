@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:split_money/group_details/balance_tab.dart';
+//import 'package:split_money/group_details/balance_tab.dart';
 import 'package:split_money/group_details/expense_tab.dart';
 import 'package:split_money/screens/add_expense.dart';
 
@@ -51,7 +52,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen>
               controller: _tabController,
               children: [
                 ExpenseTab(groupId: widget.group.id),
-                BalanceTab(groupId: widget.group.id),
+                BalanceScreen(groupId: widget.group.id),
               ],
             ),
           ),

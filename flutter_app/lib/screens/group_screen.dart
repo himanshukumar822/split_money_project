@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
+
 import 'package:split_money/providers/group_provider.dart';
 import 'package:split_money/screens/creategroup_screen.dart';
 import 'package:split_money/providers/auth_provider.dart';
@@ -16,32 +19,54 @@ class _GroupsScreenState extends State<GroupsScreen> {
   String userId = "";
   String token = "";
 
+  double youOwe = 0;
+  double youGet = 0;
+
   @override
   void initState() {
     super.initState();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final groupProvider = Provider.of<GroupProvider>(context, listen: false);
 
-      String userId = auth.userId;
-      String token = auth.token;
-
-      print("Calling getGroups with userId: $userId");
-
-      groupProvider.getGroups(userId, token);
-    });
-
-    Future.microtask(() {
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-
       userId = auth.userId;
       token = auth.token;
 
-      Provider.of<GroupProvider>(
-        context,
-        listen: false,
-      ).getGroups(userId, token);
+      print("USER NAME: ${auth.userName}"); // 🔥 DEBUG
+
+      groupProvider.getGroups(userId, token);
+
+      fetchSummary();
     });
+  }
+
+  // 🔥 FETCH TOTAL BALANCE
+  Future<void> fetchSummary() async {
+    try {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+
+      final url =
+          "http://172.18.5.69:5000/api/balances/summary/${auth.userName}";
+
+      print("CALLING API: $url"); // 🔥 DEBUG
+
+      final response = await http.get(Uri.parse(url));
+
+      print("API RESPONSE: ${response.body}"); // 🔥 DEBUG
+
+      final data = jsonDecode(response.body);
+
+      setState(() {
+        youOwe = (data["youOwe"] ?? 0).toDouble();
+        youGet = (data["youGet"] ?? 0).toDouble();
+      });
+
+      print("YOU OWE: $youOwe");
+      print("YOU GET: $youGet");
+    } catch (e) {
+      print("SUMMARY ERROR: $e");
+    }
   }
 
   @override
@@ -81,8 +106,6 @@ class _GroupsScreenState extends State<GroupsScreen> {
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [Color(0xFF5A67D8), Color(0xFF3F4A8A)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(20),
               ),
@@ -91,13 +114,13 @@ class _GroupsScreenState extends State<GroupsScreen> {
                 children: [
                   _balanceItem(
                     title: "You owe",
-                    amount: "₹500",
+                    amount: "₹${youOwe.toInt()}",
                     color: Colors.redAccent,
                   ),
                   Container(height: 40, width: 1, color: Colors.white30),
                   _balanceItem(
                     title: "You get",
-                    amount: "₹1200",
+                    amount: "₹${youGet.toInt()}",
                     color: Colors.greenAccent,
                   ),
                 ],
@@ -113,7 +136,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
 
             const SizedBox(height: 12),
 
-            // 🔥 GROUP LIST (WRAP)
+            // 🔥 GROUP LIST
             Expanded(
               child: Consumer<GroupProvider>(
                 builder: (context, provider, child) {
@@ -125,7 +148,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
                     spacing: 16,
                     runSpacing: 16,
                     children: [
-                      // ➕ CREATE BUTTON
+                      // ➕ CREATE GROUP
                       GestureDetector(
                         onTap: () {
                           showModalBottomSheet(
@@ -144,11 +167,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
                                 color: Colors.black,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(
-                                Icons.add,
-                                color: Colors.white,
-                                size: 30,
-                              ),
+                              child: const Icon(Icons.add, color: Colors.white),
                             ),
                             const SizedBox(height: 6),
                             const Text("Create new"),
@@ -156,20 +175,22 @@ class _GroupsScreenState extends State<GroupsScreen> {
                         ),
                       ),
 
-                      // 🔥 DYNAMIC GROUPS
+                      // 🔥 GROUP ITEMS
                       ...provider.groups.map((group) {
                         return GestureDetector(
-                          onTap: () {
-                            Navigator.push(
+                          onTap: () async {
+                            await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (_) => GroupDetailScreen(group: group),
                               ),
                             );
+
+                            // 🔥 REFRESH AFTER RETURN
+                            fetchSummary();
                           },
                           child: _recentGroupItem(group.name),
                         );
-                        // ignore: unnecessary_to_list_in_spreads
                       }).toList(),
                     ],
                   );
@@ -190,10 +211,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
   }) {
     return Column(
       children: [
-        Text(
-          title,
-          style: const TextStyle(color: Colors.white70, fontSize: 16),
-        ),
+        Text(title, style: const TextStyle(color: Colors.white70)),
         const SizedBox(height: 8),
         Text(
           amount,
@@ -220,16 +238,14 @@ class _GroupsScreenState extends State<GroupsScreen> {
                 color: Colors.grey[200],
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(Icons.luggage, size: 30),
+              child: const Icon(Icons.luggage),
             ),
-
-            // 🔥 PLUS ICON TOP RIGHT
             Positioned(
               top: 4,
               right: 4,
               child: Container(
                 padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.blue,
                   shape: BoxShape.circle,
                 ),
@@ -238,7 +254,6 @@ class _GroupsScreenState extends State<GroupsScreen> {
             ),
           ],
         ),
-
         const SizedBox(height: 6),
         SizedBox(
           width: 70,

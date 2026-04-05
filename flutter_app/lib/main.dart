@@ -4,6 +4,7 @@ import 'package:split_money/screens/auth/auth_landing_screen.dart';
 import 'package:split_money/providers/auth_provider.dart';
 import 'package:split_money/providers/group_provider.dart';
 import 'package:split_money/screens/main_screen.dart';
+import 'package:split_money/providers/expense_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,6 +27,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider.value(value: authProvider),
         ChangeNotifierProvider(create: (_) => GroupProvider()),
+        ChangeNotifierProvider(create: (_) => ExpenseProvider()),
       ],
       child: Consumer<AuthProvider>(
         builder: (context, provider, _) {

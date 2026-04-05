@@ -6,17 +6,27 @@ class GroupServices {
 
   // ✅ GET GROUPS (FIXED)
   Future<List<dynamic>> fetchGroups(String userId, String token) async {
+    final url = Uri.parse("$baseurl/groups/$userId");
+    print("✅ CALLING: $url");
     final response = await http.get(
-      Uri.parse("$baseurl/groups/$userId"), // ⭐ FIXED
+      url,
       headers: {
         "Authorization": "Bearer $token",
         "Content-Type": "application/json",
       },
     );
 
+    print("STATUS CODE: ${response.statusCode}");
+    print("RAW RESPONSE: ${response.body}");
+
+    // 🔥 CHECK BEFORE DECODING
+    if (response.body.startsWith("<!DOCTYPE html>")) {
+      throw Exception("❌ Wrong API URL or backend route not found");
+    }
+
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      return data["groups"]; // ⭐ FIXED (backend sends { groups: [...] })
+      return data["groups"];
     } else {
       throw Exception("Failed to load groups");
     }

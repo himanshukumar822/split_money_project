@@ -9,7 +9,7 @@ class AuthProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  // ✅ FIXED VARIABLES
+  // ✅ VARIABLES
   String? _userId;
   String? _token;
   String? _name;
@@ -18,6 +18,10 @@ class AuthProvider extends ChangeNotifier {
   // ✅ GETTERS
   String get userId => _userId ?? "";
   String get token => _token ?? "";
+
+  // 🔥 IMPORTANT (ADD THIS)
+  String get userName => _name ?? "User";
+
   String get name => _name ?? "User";
   String? get email => _email;
 
@@ -41,7 +45,7 @@ class AuthProvider extends ChangeNotifier {
         final user = response["user"];
 
         // ✅ STORE DATA
-        _userId = user["_id"]; // ⭐ IMPORTANT
+        _userId = user["_id"];
         _name = user["name"];
         _email = user["email"];
         _token = response["token"];
@@ -109,7 +113,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> loadUser() async {
     final prefs = await SharedPreferences.getInstance();
 
-    _userId = prefs.getString("userId"); // ⭐ IMPORTANT
+    _userId = prefs.getString("userId");
     _token = prefs.getString("token");
     _email = prefs.getString("email");
     _name = prefs.getString("name") ?? "User";
