@@ -21,9 +21,6 @@ class _BalanceScreenState extends State<BalanceScreen> {
   bool isLoading = true;
   bool isSettling = false;
 
-  // ✅ Track settled transactions (LOCAL ONLY)
-  Set<String> settledIds = {};
-
   @override
   void initState() {
     super.initState();
@@ -56,13 +53,21 @@ class _BalanceScreenState extends State<BalanceScreen> {
 
       await expenseService.addExpense(
         description: "Settlement",
-        amount: t["amount"].toDouble(),
-        paidBy: t["from"],
-        splitBetween: [t["to"]],
+        amount: (t["amount"] as num).toDouble(),
+
+        // 🔥 IMPORTANT FIX → reverse payment
+        paidBy: t["to"],
+
+        // 🔥 MUST match backend (array of strings)
+        splitBetween: [t["from"]],
+
         token: auth.token,
         groupId: widget.groupId,
         isSettlement: true,
       );
+
+      // ✅ refresh balance after settlement
+      await loadData();
 
       ScaffoldMessenger.of(
         context,
@@ -94,14 +99,11 @@ class _BalanceScreenState extends State<BalanceScreen> {
       itemBuilder: (context, index) {
         final t = transactions[index];
 
-        final id = "${t["from"]}-${t["to"]}-${t["amount"]}";
-        final isSettled = settledIds.contains(id);
-
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isSettled ? Colors.red[50] : Colors.white, // 🔥 RED LIGHT
+            color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 5)],
           ),
@@ -142,25 +144,13 @@ class _BalanceScreenState extends State<BalanceScreen> {
 
               /// BUTTON
               ElevatedButton(
-                onPressed: (isSettling || isSettled)
+                onPressed: isSettling
                     ? null
                     : () async {
-                        // ✅ ONLY UI change
-                        setState(() {
-                          settledIds.add(id);
-                        });
-
-                        // ✅ Backend update (for balances)
                         await settleTransaction(t);
-
-                        // ❌ NO loadData() → stays visible
                       },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isSettled ? Colors.red : Colors.green,
-                ),
-                child: isSettled
-                    ? const Text("Settled") // 🔥 RED STATE
-                    : isSettling
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                child: isSettling
                     ? const SizedBox(
                         height: 16,
                         width: 16,
