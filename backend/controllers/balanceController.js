@@ -1,7 +1,7 @@
 const Expense = require("../models/Expense");
 
 
-// ✅ STEP 1 — Calculate Net Balances (FIXED)
+// ✅ STEP 1 — Calculate Net Balances
 exports.calculateBalances = (expenses) => {
   const balances = {};
 
@@ -9,12 +9,23 @@ exports.calculateBalances = (expenses) => {
 
     if (!expense.splitBetween || expense.splitBetween.length === 0) return;
 
-    const share = expense.amount / expense.splitBetween.length;
-
-    // 🟢 NORMAL EXPENSE
+    // 🟢 NORMAL EXPENSE (FIXED SPLIT)
     if (!expense.isSettlement) {
 
+      const total = expense.amount;
+      const count = expense.splitBetween.length;
+
+      const baseShare = Math.floor(total / count);
+      let remainder = total % count;
+
       expense.splitBetween.forEach((user) => {
+        let share = baseShare;
+
+        if (remainder > 0) {
+          share += 1;
+          remainder--;
+        }
+
         balances[user] = (balances[user] || 0) - share;
       });
 
@@ -22,18 +33,18 @@ exports.calculateBalances = (expenses) => {
         (balances[expense.paidBy] || 0) + expense.amount;
     }
 
-    // 🔥 SETTLEMENT EXPENSE (REVERSE EFFECT)
+    // 🔥 SETTLEMENT (NO CHANGE)
     else {
-      const from = expense.paidBy;
-      const to = expense.splitBetween[0];
+      const receiver = expense.paidBy;
+      const payer = expense.splitBetween[0];
 
-      balances[from] = (balances[from] || 0) - expense.amount;
-      balances[to] = (balances[to] || 0) + expense.amount;
+      balances[receiver] = (balances[receiver] || 0) - expense.amount;
+      balances[payer] = (balances[payer] || 0) + expense.amount;
     }
 
   });
 
-  // ✅ rounding
+  // ✅ rounding safeguard
   for (let user in balances) {
     balances[user] = Math.round(balances[user]);
   }
@@ -43,7 +54,7 @@ exports.calculateBalances = (expenses) => {
 
 
 
-// ✅ STEP 2 — Simplify to Transactions (NO CHANGE)
+// ✅ STEP 2 — Simplify to Transactions
 exports.splitMoney = (balances) => {
 
   const creditors = [];
@@ -89,14 +100,11 @@ exports.splitMoney = (balances) => {
 
 
 
-// ✅ STEP 3 — API: Get Group Balance (FIXED)
+// ✅ STEP 3 — API: Get Group Balance
 exports.getGroupBalances = async (req, res) => {
-
   try {
-
     const { groupId } = req.params;
 
-    // ✅ FETCH ALL (NO FILTER ❌)
     const expenses = await Expense.find({ groupId });
 
     const balances = exports.calculateBalances(expenses);
@@ -115,28 +123,33 @@ exports.getGroupBalances = async (req, res) => {
 
 
 
-// ✅ STEP 4 — USER SUMMARY (FIXED)
+// ✅ STEP 4 — USER SUMMARY (FINAL FIXED)
 exports.getUserSummary = async (req, res) => {
   try {
     const { userName } = req.params;
 
-    // ✅ FETCH ALL (NO FILTER ❌)
     const expenses = await Expense.find();
 
     let netBalance = 0;
 
-    expenses.forEach(expense => {
+    expenses.forEach((expense) => {
 
       if (!expense.splitBetween || expense.splitBetween.length === 0) return;
 
       const share = expense.amount / expense.splitBetween.length;
 
+      // ✅ HANDLE "You" PROPERLY
       const paidBy =
         expense.paidBy === "You" ? userName : expense.paidBy;
 
       const members = expense.splitBetween.map(u =>
         u === "You" ? userName : u
       );
+
+      // 🔥 FILTER: only relevant expenses
+      if (paidBy !== userName && !members.includes(userName)) {
+        return;
+      }
 
       // 🟢 NORMAL EXPENSE
       if (!expense.isSettlement) {
@@ -149,17 +162,17 @@ exports.getUserSummary = async (req, res) => {
 
       }
 
-      // 🔥 SETTLEMENT
+      // 🔥 SETTLEMENT (FINAL FIX)
       else {
-        const from = expense.paidBy;
-        const to = expense.splitBetween[0];
+        const receiver = paidBy;      // ✅ mapped
+        const payer = members[0];     // ✅ mapped
 
-        if (from === userName) {
-          netBalance -= expense.amount;
+        if (payer === userName) {
+          netBalance += expense.amount;
         }
 
-        if (to === userName) {
-          netBalance += expense.amount;
+        if (receiver === userName) {
+          netBalance -= expense.amount;
         }
       }
 

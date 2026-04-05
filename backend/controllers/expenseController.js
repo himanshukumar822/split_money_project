@@ -4,10 +4,9 @@ const Activity = require("../models/activity");
 
 exports.addExpense = async (req, res) => {
   try {
-
     const { groupId, description, amount, paidBy, splitBetween, isSettlement } = req.body;
 
-    // ✅ FIX: force boolean
+    // ✅ ensure boolean
     const isSettlementFlag = isSettlement === true || isSettlement === "true";
 
     const expense = new Expense({
@@ -23,14 +22,18 @@ exports.addExpense = async (req, res) => {
 
     const group = await Group.findById(groupId);
 
-    // ✅ FIXED ACTIVITY MESSAGE
+    // ✅ CLEAN ACTIVITY (NO "OWES")
     if (isSettlementFlag) {
+      const payer = splitBetween[0];
+      const receiver = paidBy;
+
       await Activity.create({
-        user: paidBy,
+        user: payer,
         type: "SETTLEMENT",
-        message: `${paidBy} paid ₹${amount} to ${splitBetween[0]} in ${group?.name || "group"}`,
+        message: `${payer} paid ₹${amount} to ${receiver} in ${group?.name || "group"}`,
         groupId: groupId
       });
+
     } else {
       await Activity.create({
         user: paidBy,
@@ -54,13 +57,16 @@ exports.addExpense = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+
+// ✅ GET GROUP EXPENSES (NO CHANGE)
 exports.getGroupExpenses = async (req, res) => {
   try {
     const { groupId } = req.params;
 
     const expenses = await Expense.find({
       groupId,
-      isSettlement: false // ✅ hide settlement
+      isSettlement: false // hide settlement
     });
 
     res.json({
