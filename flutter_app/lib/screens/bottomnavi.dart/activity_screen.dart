@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
@@ -28,10 +29,17 @@ class _ActivityScreenState extends State<ActivityScreen> {
     fetchActivities();
   }
 
+  Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString("token"); // 🔥 must match login storage key
+  }
+
   Future<void> fetchActivities() async {
     try {
+      final token = await getToken();
       final response = await http.get(
         Uri.parse("http://172.18.5.69:5000/api/activity"),
+        headers: {"Authorization": "Bearer $token"},
       );
 
       final data = jsonDecode(response.body);

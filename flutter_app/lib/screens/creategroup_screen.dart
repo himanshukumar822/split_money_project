@@ -183,18 +183,25 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
                           token,
                         );
 
-                        if (group != null) {
-                          Navigator.pop(context);
-
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => AddExpenseScreen(
-                                groupId: group["_id"], // ✅ IMPORTANT
-                              ),
+                        if (group == null || group == false) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Failed to create group"),
                             ),
                           );
+                          return;
                         }
+
+                        Navigator.pop(context);
+
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AddExpenseScreen(
+                              groupId: group["_id"], // ✅ now safe
+                            ),
+                          ),
+                        );
                       },
                       child: const Text("Create"),
                     ),

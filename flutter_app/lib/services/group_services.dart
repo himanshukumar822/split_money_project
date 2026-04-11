@@ -39,7 +39,7 @@ class GroupServices {
     String token,
   ) async {
     final response = await http.post(
-      Uri.parse("$baseurl/groups/create"),
+      Uri.parse("$baseurl/groups"),
       headers: {
         "Content-Type": "application/json",
         "Authorization": "Bearer $token", // ok even if unused
@@ -47,7 +47,7 @@ class GroupServices {
       body: jsonEncode({
         "name": name,
         "members": [userId], // ⭐ REQUIRED
-        "createdBy": userId, // ⭐ REQUIRED
+        // "createdBy": userId, // ⭐ REQUIRED
       }),
     );
 

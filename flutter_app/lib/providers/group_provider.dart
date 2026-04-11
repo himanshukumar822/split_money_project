@@ -48,10 +48,10 @@ class GroupProvider with ChangeNotifier {
 
       return data["group"];
     } catch (e) {
-      print(e);
+      print("Create Group Error: $e");
       _isLoading = false;
       notifyListeners();
-      return false;
+      return null; // ✅ SAFE
     }
   }
 }
