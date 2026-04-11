@@ -28,7 +28,7 @@ exports.addExpense = async (req, res) => {
       const receiver = paidBy;
 
       await Activity.create({
-        user: payer,
+        userId: req.user.id,
         type: "SETTLEMENT",
         message: `${payer} paid ₹${amount} to ${receiver} in ${group?.name || "group"}`,
         groupId: groupId
@@ -36,7 +36,7 @@ exports.addExpense = async (req, res) => {
 
     } else {
       await Activity.create({
-        user: paidBy,
+        userId: req.user.id,
         type: "EXPENSE_ADDED",
         message: `Expense "${description}" added in ${group?.name || "group"}`,
         groupId: groupId
@@ -78,29 +78,3 @@ exports.getGroupExpenses = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-// //exports.settleExpense = async (req, res) => {
-//   try {
-//     const { expenseId } = req.params;
-
-//     const expense = await Expense.findById(expenseId);
-
-//     if (!expense) {
-//       return res.status(404).json({ message: "Expense not found" });
-//     }
-
-//     if (expense.settled) {
-//       return res.status(400).json({ message: "Already settled" });
-//     }
-
-//     expense.settled = true;
-//     await expense.save();
-
-//     res.status(200).json({
-//       message: "Expense settled successfully",
-//       expense
-//     });
-
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// //};

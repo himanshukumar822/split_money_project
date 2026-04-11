@@ -23,16 +23,16 @@ exports.createGroup = async (req, res) => {
   try {
 
     const { name, members, createdBy } = req.body;
-
+    const userId = req.user.id;
     const group = new Group({
       name,
       members,
-      createdBy
+      createdBy: userId
     });
 
     await group.save();
     await Activity.create({
-  user: createdBy,
+  userId: userId,
   type: "GROUP_CREATED",
   message: `Group "${name}" created`,
   groupId: group._id

@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-
+const auth = require("../config/auth");
 const {
   createGroup,
   getUserGroups,
@@ -11,7 +11,7 @@ const {
   getGroupBalances
 } = require("../controllers/balanceController");
 
-router.post("/create", createGroup);
+router.post("/",auth, createGroup);
 router.get("/:userId", getUserGroups);
 router.post("/:groupId/add-member", addMember);
 

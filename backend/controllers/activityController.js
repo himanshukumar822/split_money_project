@@ -4,7 +4,7 @@ exports.getActivities = async (req, res) => {
   try {
 
     const activities = await Activity
-      .find()
+      .find({ userId: req.user.id })
       .sort({ createdAt: -1 });
 
     res.json({ activities });
