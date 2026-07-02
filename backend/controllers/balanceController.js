@@ -105,15 +105,24 @@ exports.getGroupBalances = async (req, res) => {
   try {
     const { groupId } = req.params;
 
+  
     const expenses = await Expense.find({ groupId });
 
-    const balances = exports.calculateBalances(expenses);
+// 🔥 FILTER INVALID DATA (IMPORTANT)
+const cleanExpenses = expenses.filter((e) => {
+  return (
+    e.paidBy &&
+    typeof e.paidBy === "string" &&
+    e.splitBetween &&
+    e.splitBetween.length > 0
+  );
+});
+
+    const balances = exports.calculateBalances(cleanExpenses);
     const transactions = exports.splitMoney(balances);
 
-    res.json({
-      balances,
-      transactions
-    });
+    // 🔥 RETURN ONLY TRANSACTIONS (IMPORTANT)
+    res.json(transactions);
 
   } catch (error) {
     console.error("Balance Error:", error);
@@ -126,7 +135,7 @@ exports.getGroupBalances = async (req, res) => {
 // ✅ STEP 4 — USER SUMMARY (FINAL FIXED)
 exports.getUserSummary = async (req, res) => {
   try {
-    const { userName } = req.params;
+    const { userId } = req.params;
 
     const expenses = await Expense.find();
 
@@ -138,40 +147,35 @@ exports.getUserSummary = async (req, res) => {
 
       const share = expense.amount / expense.splitBetween.length;
 
-      // ✅ HANDLE "You" PROPERLY
-      const paidBy =
-        expense.paidBy === "You" ? userName : expense.paidBy;
+      const paidBy = expense.paidBy;
+      const members = expense.splitBetween;
 
-      const members = expense.splitBetween.map(u =>
-        u === "You" ? userName : u
-      );
-
-      // 🔥 FILTER: only relevant expenses
-      if (paidBy !== userName && !members.includes(userName)) {
+      // ✅ FILTER
+      if (paidBy !== userId && !members.includes(userId)) {
         return;
       }
 
       // 🟢 NORMAL EXPENSE
       if (!expense.isSettlement) {
 
-        if (paidBy === userName) {
+        if (paidBy === userId) {
           netBalance += expense.amount - share;
-        } else if (members.includes(userName)) {
+        } else if (members.includes(userId)) {
           netBalance -= share;
         }
 
       }
 
-      // 🔥 SETTLEMENT (FINAL FIX)
+      // 🔥 SETTLEMENT
       else {
-        const receiver = paidBy;      // ✅ mapped
-        const payer = members[0];     // ✅ mapped
+        const receiver = paidBy;
+        const payer = members[0];
 
-        if (payer === userName) {
+        if (payer === userId) {
           netBalance += expense.amount;
         }
 
-        if (receiver === userName) {
+        if (receiver === userId) {
           netBalance -= expense.amount;
         }
       }

@@ -1,8 +1,11 @@
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-`   `
+
+  
 exports.signup = async (req, res) => {
+  console.log("========== SIGNUP REQUEST ==========");
+  console.log(req.body);
   try {
       
     const { name, email, password } = req.body;
@@ -22,7 +25,7 @@ const hashedPassword = await bcrypt.hash(password, 10);
     });
 
     await user.save();
-
+    console.log("User saved successfully:", user);
     res.status(201).json({
       message: "User created successfully",
         user: {
@@ -33,6 +36,7 @@ const hashedPassword = await bcrypt.hash(password, 10);
     });
 
   } catch (error) {
+    console.error("Signup Error:", error);
     res.status(500).json({ error: error.message });
   }
 };
