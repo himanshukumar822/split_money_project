@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:split_money/screens/main_screen.dart';
 import '../../providers/auth_provider.dart';
 import 'package:split_money/screens/signup_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+//import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -119,22 +119,22 @@ class _LoginScreenState extends State<LoginScreen> {
                                 );
 
                                 if (success) {
-                                  String? token = authProvider.token;
+                                  // String? token = authProvider.token;
 
-                                  final prefs =
-                                      await SharedPreferences.getInstance();
+                                  // final prefs =
+                                  //     await SharedPreferences.getInstance();
 
-                                  await prefs.setString('token', token);
+                                  // await prefs.setString('token', token);
 
-                                  // 🔥 NEW FIX
-                                  await prefs.setString(
-                                    'name',
-                                    authProvider.name,
-                                  );
-                                  await prefs.setString(
-                                    'email',
-                                    authProvider.email ?? "",
-                                  );
+                                  // // 🔥 NEW FIX
+                                  // await prefs.setString(
+                                  //   'name',
+                                  //   authProvider.name,
+                                  // );
+                                  // await prefs.setString(
+                                  //   'email',
+                                  //   authProvider.email ?? "",
+                                  // );
 
                                   Navigator.pushReplacement(
                                     context,

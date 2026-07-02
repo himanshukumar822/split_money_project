@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class BalanceService {
-  final String baseUrl = "http://172.18.5.69:5000/api/groups";
+  final String baseUrl = "http://192.168.31.142:5000/api/groups";
 
   Future<List<dynamic>> getBalances(String groupId, String token) async {
     final response = await http.get(

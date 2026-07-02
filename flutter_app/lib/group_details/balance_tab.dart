@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/balance_service.dart';
 import '../services/expense_services.dart';
 import '../providers/auth_provider.dart';
+import '../providers/group_provider.dart';
 
 class BalanceScreen extends StatefulWidget {
   final String groupId;
@@ -27,6 +28,21 @@ class _BalanceScreenState extends State<BalanceScreen> {
     loadData();
   }
 
+  /// ✅ SAFE USER NAME (NO CRASH EVER)
+  String getUserName(String? userId) {
+    if (userId == null) return "Unknown";
+
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    if (userId == auth.userId) return "You";
+
+    final userMap = buildUserMap();
+
+    final user = userMap[userId];
+
+    return user?["name"] ?? "Unknown";
+  }
+
   Future<void> loadData() async {
     setState(() => isLoading = true);
 
@@ -35,14 +51,36 @@ class _BalanceScreenState extends State<BalanceScreen> {
 
       final data = await balanceService.getBalances(widget.groupId, auth.token);
 
-      setState(() {
-        transactions = data;
-        isLoading = false;
-      });
+      // ✅ FORCE SAFE LIST
+      final List safeList = (data ?? []) as List;
+
+      // ✅ CLEAN EACH ITEM
+      transactions = safeList.map((e) {
+        if (e is Map) {
+          return {
+            "from": e["from"]?.toString(),
+            "to": e["to"]?.toString(),
+            "amount": e["amount"] ?? 0,
+          };
+        }
+        return {};
+      }).toList();
+
+      setState(() => isLoading = false);
     } catch (e) {
       print("Balance error: $e");
       setState(() => isLoading = false);
     }
+  }
+
+  Map<String, dynamic> buildUserMap() {
+    final groupProvider = Provider.of<GroupProvider>(context, listen: false);
+
+    final group = groupProvider.groups.firstWhere(
+      (g) => g.id == widget.groupId,
+    );
+
+    return {for (var user in group.members) user["_id"]: user};
   }
 
   Future<void> settleTransaction(Map t) async {
@@ -51,22 +89,22 @@ class _BalanceScreenState extends State<BalanceScreen> {
     try {
       final auth = Provider.of<AuthProvider>(context, listen: false);
 
+      final amount = (t["amount"] ?? 0).toDouble();
+      final from = t["from"]?.toString();
+      final to = t["to"]?.toString();
+
+      if (from == null || to == null) return;
+
       await expenseService.addExpense(
         description: "Settlement",
-        amount: (t["amount"] as num).toDouble(),
-
-        // 🔥 IMPORTANT FIX → reverse payment
-        paidBy: t["to"],
-
-        // 🔥 MUST match backend (array of strings)
-        splitBetween: [t["from"]],
-
+        amount: amount,
+        paidBy: to,
+        splitBetween: [from],
         token: auth.token,
         groupId: widget.groupId,
         isSettlement: true,
       );
 
-      // ✅ refresh balance after settlement
       await loadData();
 
       ScaffoldMessenger.of(
@@ -97,7 +135,13 @@ class _BalanceScreenState extends State<BalanceScreen> {
       padding: const EdgeInsets.all(12),
       itemCount: transactions.length,
       itemBuilder: (context, index) {
-        final t = transactions[index];
+        if (index >= transactions.length) return const SizedBox();
+
+        final t = transactions[index] ?? {};
+
+        final fromId = t["from"]?.toString();
+        final toId = t["to"]?.toString();
+        final amount = t["amount"] ?? 0;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -108,22 +152,23 @@ class _BalanceScreenState extends State<BalanceScreen> {
             boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 5)],
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               /// FROM
-              Column(
-                children: [
-                  const CircleAvatar(radius: 25),
-                  const SizedBox(height: 6),
-                  Text(t["from"]),
-                ],
+              Expanded(
+                child: Column(
+                  children: [
+                    const CircleAvatar(radius: 25),
+                    const SizedBox(height: 6),
+                    Text(getUserName(fromId), overflow: TextOverflow.ellipsis),
+                  ],
+                ),
               ),
 
               /// AMOUNT
               Column(
                 children: [
                   Text(
-                    "₹${t["amount"]}",
+                    "₹$amount",
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
@@ -134,13 +179,17 @@ class _BalanceScreenState extends State<BalanceScreen> {
               ),
 
               /// TO
-              Column(
-                children: [
-                  const CircleAvatar(radius: 25),
-                  const SizedBox(height: 6),
-                  Text(t["to"]),
-                ],
+              Expanded(
+                child: Column(
+                  children: [
+                    const CircleAvatar(radius: 25),
+                    const SizedBox(height: 6),
+                    Text(getUserName(toId), overflow: TextOverflow.ellipsis),
+                  ],
+                ),
               ),
+
+              const SizedBox(width: 10),
 
               /// BUTTON
               ElevatedButton(

@@ -31,7 +31,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
   Future<void> fetchActivities() async {
     try {
       final response = await http.get(
-        Uri.parse("http://172.18.5.69:5000/api/activity"),
+        Uri.parse("http://192.168.31.142:5000/api/activity"),
       );
 
       final data = jsonDecode(response.body);

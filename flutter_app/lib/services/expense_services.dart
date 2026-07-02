@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ExpenseService {
-  final String baseUrl = "http://172.18.5.69:5000/api";
+  final String baseUrl = "http://192.168.31.142:5000/api";
 
   Future<void> addExpense({
     required String description,

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class GroupServices {
-  final String baseurl = "http://172.18.5.69:5000/api";
+  final String baseurl = "http://192.168.31.142:5000/api";
 
   // ✅ GET GROUPS (FIXED)
   Future<List<dynamic>> fetchGroups(String userId, String token) async {
@@ -50,7 +50,7 @@ class GroupServices {
         "createdBy": userId, // ⭐ REQUIRED
       }),
     );
-
+    print("Status Code: ${response.statusCode}");
     print("Create Group Response: ${response.body}");
 
     if (response.statusCode == 201 || response.statusCode == 200) {

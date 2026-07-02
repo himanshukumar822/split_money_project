@@ -1,9 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:split_money/screens/login_screen.dart';
 import '../../providers/auth_provider.dart';
-import 'package:split_money/screens/main_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+//import 'package:split_money/screens/main_screen.dart';
+//import 'package:shared_preferences/shared_preferences.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -142,22 +143,11 @@ class _SignupScreenState extends State<SignupScreen> {
                                 );
 
                                 if (userData != null) {
-                                  final prefs =
-                                      await SharedPreferences.getInstance();
-
-                                  await prefs.setString(
-                                    'name',
-                                    userData['name'],
-                                  );
-                                  await prefs.setString(
-                                    'email',
-                                    userData['email'],
-                                  );
                                   Navigator.pushReplacement(
                                     // ignore: use_build_context_synchronously
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => MainScreen(),
+                                      builder: (_) => const LoginScreen(),
                                     ),
                                   );
                                 }

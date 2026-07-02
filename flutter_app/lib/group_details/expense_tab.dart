@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../services/expense_services.dart';
 import '../providers/auth_provider.dart';
+//import 'package:split_money/providers/group_provider.dart';
 
 class ExpenseTab extends StatefulWidget {
   final String groupId;
@@ -42,6 +43,20 @@ class _ExpenseTabState extends State<ExpenseTab> {
     }
   }
 
+  String getUserName(String? userId) {
+    if (userId == null) return "Unknown";
+
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    if (userId == auth.userId) return "You";
+
+    if (userId.length >= 6) {
+      return userId.substring(0, 6);
+    }
+
+    return "User";
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -60,7 +75,8 @@ class _ExpenseTabState extends State<ExpenseTab> {
         itemBuilder: (context, index) {
           final e = expenses[index];
 
-          final paidByName = e["paidBy"] ?? "Unknown";
+          final paidById = e["paidBy"]?.toString();
+          final paidByName = getUserName(paidById);
           final isYouPaid = paidByName == "You";
 
           final date =

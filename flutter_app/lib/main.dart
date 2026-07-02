@@ -34,7 +34,7 @@ class MyApp extends StatelessWidget {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             // ignore: unnecessary_null_comparison
-            home: provider.token != null
+            home: provider.token.isNotEmpty
                 ? const MainScreen()
                 : const AuthLandingScreen(),
           );

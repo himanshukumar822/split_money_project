@@ -17,12 +17,10 @@ class AddExpenseScreen extends StatefulWidget {
 }
 
 class _AddExpenseScreenState extends State<AddExpenseScreen> {
-  List<Map<String, dynamic>> members = [
-    {"name": "You", "isYou": true},
-  ];
+  List<Map<String, dynamic>> members = [];
 
   final ExpenseService expenseService = ExpenseService();
-  String paidBy = "You";
+  String? paidBy;
 
   final TextEditingController descriptionController = TextEditingController();
   final TextEditingController amountController = TextEditingController();
@@ -30,17 +28,28 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   bool isEqualSplit = true;
 
   @override
+  void initState() {
+    super.initState();
+
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    members = [
+      {"id": auth.userId, "name": auth.name, "isYou": true},
+    ];
+
+    paidBy = auth.userId;
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
-
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         title: const Text("Add Expense", style: TextStyle(color: Colors.black)),
         iconTheme: const IconThemeData(color: Colors.black),
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -61,6 +70,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                           (m) => m["name"] == contact.displayName,
                         )) {
                           members.add({
+                            "id": contact.id ?? contact.displayName, // temp id
                             "name": contact.displayName ?? "No Name",
                             "isYou": false,
                           });
@@ -80,9 +90,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     ],
                   ),
                 ),
-
                 const SizedBox(width: 12),
-
                 Expanded(
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -131,8 +139,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                     value: paidBy,
                     items: members.map<DropdownMenuItem<String>>((member) {
                       return DropdownMenuItem<String>(
-                        value: member["name"],
-                        child: Text(member["name"]),
+                        value: member["id"], // ✅ userId
+                        child: Text(member["name"]), // UI name
                       );
                     }).toList(),
                     onChanged: (val) {
@@ -200,22 +208,19 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                             listen: false,
                           );
 
-                          /// ✅ SIMPLE FIX → use NAME directly
-                          final paidByName = paidBy;
-
                           final splitBetween = members
-                              .map((m) => m["name"])
+                              .map((m) => m["id"])
                               .toList();
 
                           await expenseService.addExpense(
                             description: description,
                             amount: amount,
-                            paidBy: paidByName, // ✅ NAME
-                            splitBetween: splitBetween, // ✅ NAMES
+                            paidBy: paidBy!, // ✅ userId
+                            splitBetween: splitBetween, // ✅ userIds
                             token: auth.token,
                             groupId: widget.groupId,
                           );
-                          print("MEMBERS LIST: $members");
+
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text("Expense added successfully"),
@@ -230,7 +235,6 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                           Navigator.pop(context);
                         } catch (e) {
                           print("Error: $e");
-
                           ScaffoldMessenger.of(
                             context,
                           ).showSnackBar(SnackBar(content: Text("Error: $e")));
@@ -289,79 +293,35 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             "Split Details",
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
-
           const SizedBox(height: 10),
-
           ...members.map((m) {
             return Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [Text(m["name"]), Text("₹${share.toStringAsFixed(2)}")],
             );
           }),
-
-          const Divider(),
-
-          Text(
-            "$paidBy paid ₹${total.toStringAsFixed(2)}",
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-
-          const SizedBox(height: 6),
-
-          ...members
-              .where((m) => m["name"] != paidBy)
-              .map(
-                (m) => Text(
-                  "${m["name"]} owes ₹${share.toStringAsFixed(2)} to $paidBy",
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ),
         ],
       ),
     );
   }
 
   Widget _memberChip(Map<String, dynamic> member) {
-    return Stack(
+    final name = member["name"] ?? "";
+
+    return Column(
       children: [
-        Column(
-          children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: Colors.grey[300],
-              child: Text(member["name"][0].toUpperCase()),
-            ),
-            const SizedBox(height: 4),
-            SizedBox(
-              width: 60,
-              child: Text(
-                member["name"],
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ],
+        CircleAvatar(
+          radius: 28,
+          backgroundColor: Colors.grey[300],
+          child: Text(name.isNotEmpty ? name[0].toUpperCase() : "?"),
         ),
-        Positioned(
-          right: 0,
-          top: 0,
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                members.remove(member);
-                if (paidBy == member["name"]) {
-                  paidBy = members.first["name"];
-                }
-              });
-            },
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.red,
-                shape: BoxShape.circle,
-              ),
-              padding: const EdgeInsets.all(4),
-              child: const Icon(Icons.close, size: 14, color: Colors.white),
-            ),
+        const SizedBox(height: 4),
+        SizedBox(
+          width: 60,
+          child: Text(
+            name,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
           ),
         ),
       ],

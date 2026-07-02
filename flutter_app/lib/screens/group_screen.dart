@@ -47,7 +47,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
       final auth = Provider.of<AuthProvider>(context, listen: false);
 
       final url =
-          "http://172.18.5.69:5000/api/balances/summary/${auth.userName}";
+          "http://192.168.31.142:5000/api/balances/summary/${auth.userName}";
 
       print("CALLING API: $url"); // 🔥 DEBUG
 

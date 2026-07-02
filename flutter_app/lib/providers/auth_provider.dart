@@ -87,13 +87,23 @@ class AuthProvider extends ChangeNotifier {
       if (response["message"] == "User created successfully") {
         final prefs = await SharedPreferences.getInstance();
 
-        _name = name;
-        _email = email;
+        final user = response["user"];
 
-        await prefs.setString("name", name);
-        await prefs.setString("email", email);
+        _userId = user["_id"];
+        _name = user["name"];
+        _email = user["email"];
 
-        return {"name": name, "email": email};
+        // If your backend returns a token on signup:
+        if (response["token"] != null) {
+          _token = response["token"];
+          await prefs.setString("token", _token!);
+        }
+
+        await prefs.setString("userId", _userId!);
+        await prefs.setString("name", _name!);
+        await prefs.setString("email", _email!);
+
+        return response;
       } else {
         ScaffoldMessenger.of(
           context,
