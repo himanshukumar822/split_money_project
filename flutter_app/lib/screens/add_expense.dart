@@ -34,10 +34,10 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
 
     members = [
-      {"id": auth.userId, "name": auth.name, "isYou": true},
+      {"id": auth.name, "name": auth.name, "isYou": true},
     ];
 
-    paidBy = auth.userId;
+    paidBy = auth.name;
   }
 
   @override
@@ -70,7 +70,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                           (m) => m["name"] == contact.displayName,
                         )) {
                           members.add({
-                            "id": contact.id ?? contact.displayName, // temp id
+                            "id": contact.displayName ?? "No Name", // temp id
                             "name": contact.displayName ?? "No Name",
                             "isYou": false,
                           });
@@ -211,7 +211,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                           final splitBetween = members
                               .map((m) => m["id"])
                               .toList();
-
+                          print("Paid By: $paidBy");
+                          print("Split Between: $splitBetween");
                           await expenseService.addExpense(
                             description: description,
                             amount: amount,

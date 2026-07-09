@@ -43,18 +43,16 @@ class _ExpenseTabState extends State<ExpenseTab> {
     }
   }
 
-  String getUserName(String? userId) {
-    if (userId == null) return "Unknown";
+  String getUserName(String? name) {
+    if (name == null || name.isEmpty) return "Unknown";
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
 
-    if (userId == auth.userId) return "You";
-
-    if (userId.length >= 6) {
-      return userId.substring(0, 6);
+    if (name == auth.name) {
+      return "You";
     }
 
-    return "User";
+    return name;
   }
 
   @override
@@ -75,8 +73,7 @@ class _ExpenseTabState extends State<ExpenseTab> {
         itemBuilder: (context, index) {
           final e = expenses[index];
 
-          final paidById = e["paidBy"]?.toString();
-          final paidByName = getUserName(paidById);
+          final paidByName = getUserName(e["paidBy"]?.toString());
           final isYouPaid = paidByName == "You";
 
           final date =
