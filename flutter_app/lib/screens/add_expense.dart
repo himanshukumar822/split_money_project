@@ -213,6 +213,26 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                               .toList();
                           print("Paid By: $paidBy");
                           print("Split Between: $splitBetween");
+
+                          if (members.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  "Please add at least one member.",
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+
+                          if (paidBy == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Please select who paid."),
+                              ),
+                            );
+                            return;
+                          }
                           await expenseService.addExpense(
                             description: description,
                             amount: amount,
@@ -309,23 +329,69 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   Widget _memberChip(Map<String, dynamic> member) {
     final name = member["name"] ?? "";
 
-    return Column(
-      children: [
-        CircleAvatar(
-          radius: 28,
-          backgroundColor: Colors.grey[300],
-          child: Text(name.isNotEmpty ? name[0].toUpperCase() : "?"),
-        ),
-        const SizedBox(height: 4),
-        SizedBox(
-          width: 60,
-          child: Text(
-            name,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
+    return Padding(
+      padding: const EdgeInsets.only(right: 10),
+      child: Column(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: Colors.grey[300],
+                child: Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : "?",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+
+              Positioned(
+                right: -2,
+                top: -2,
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      members.remove(member);
+
+                      // If removed member was selected in Paid By
+                      if (paidBy == member["id"]) {
+                        if (members.isNotEmpty) {
+                          paidBy = members.first["id"];
+                        } else {
+                          paidBy = null;
+                        }
+                      }
+                    });
+                  },
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 14,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+
+          const SizedBox(height: 4),
+
+          SizedBox(
+            width: 65,
+            child: Text(
+              name,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

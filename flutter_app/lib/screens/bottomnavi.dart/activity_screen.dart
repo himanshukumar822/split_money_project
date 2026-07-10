@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+import 'package:split_money/providers/auth_provider.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
@@ -10,8 +12,8 @@ class ActivityScreen extends StatefulWidget {
 }
 
 class _ActivityScreenState extends State<ActivityScreen> {
-  List allActivities = []; // 🔥 full list
-  List activities = []; // 🔥 filtered list
+  List allActivities = [];
+  List activities = [];
   bool isLoading = true;
 
   TextEditingController searchController = TextEditingController();
@@ -30,15 +32,21 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
   Future<void> fetchActivities() async {
     try {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+
       final response = await http.get(
-        Uri.parse("http://192.168.31.142:5000/api/activity"),
+        Uri.parse(
+          "http://192.168.31.142:5000/api/activity?owner=${auth.userId}",
+        ),
       );
+
+      print("Activity Response: ${response.body}");
 
       final data = jsonDecode(response.body);
 
       setState(() {
         allActivities = data["activities"] ?? [];
-        activities = allActivities; // initial full list
+        activities = allActivities;
         isLoading = false;
       });
     } catch (e) {
@@ -47,7 +55,6 @@ class _ActivityScreenState extends State<ActivityScreen> {
     }
   }
 
-  /// 🔍 SEARCH FUNCTION
   void filterActivities(String query) {
     if (query.isEmpty) {
       setState(() {
@@ -70,10 +77,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Activity"), elevation: 0),
-
       body: Column(
         children: [
-          /// 🔍 SEARCH BAR
           Padding(
             padding: const EdgeInsets.all(12),
             child: TextField(
@@ -88,8 +93,6 @@ class _ActivityScreenState extends State<ActivityScreen> {
               ),
             ),
           ),
-
-          /// CONTENT
           Expanded(
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -115,7 +118,6 @@ class _ActivityScreenState extends State<ActivityScreen> {
                           ),
                           child: Row(
                             children: [
-                              /// ICON
                               CircleAvatar(
                                 radius: 24,
                                 backgroundColor: getColor(activity["type"]),
@@ -124,10 +126,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                                   color: Colors.white,
                                 ),
                               ),
-
                               const SizedBox(width: 12),
-
-                              /// TEXT
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,14 +161,12 @@ class _ActivityScreenState extends State<ActivityScreen> {
     );
   }
 
-  /// 📅 DATE FORMAT
   String formatDate(String date) {
     final dt = DateTime.parse(date).toLocal();
     return "${dt.day}/${dt.month}/${dt.year} • "
         "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
   }
 
-  /// ICONS
   IconData getIcon(String type) {
     switch (type) {
       case "GROUP_CREATED":
@@ -183,7 +180,6 @@ class _ActivityScreenState extends State<ActivityScreen> {
     }
   }
 
-  /// COLORS
   Color getColor(String type) {
     switch (type) {
       case "GROUP_CREATED":

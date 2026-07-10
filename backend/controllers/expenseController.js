@@ -16,7 +16,7 @@ exports.addExpense = async (req, res) => {
     const isSettlementFlag =
       isSettlement === true || isSettlement === "true";
 
-    // Save names directly
+    // Create Expense
     const expense = new Expense({
       groupId,
       description,
@@ -33,11 +33,13 @@ exports.addExpense = async (req, res) => {
       $push: { expenses: expense._id },
     });
 
+    // Get group (contains createdBy)
     const group = await Group.findById(groupId);
 
-    // Activity
+    // Create Activity
     if (isSettlementFlag) {
       await Activity.create({
+        owner: group.createdBy,   // ✅ owner of the group
         type: "SETTLEMENT",
         message: `${splitBetween[0]} paid ₹${amount} to ${paidBy} in ${
           group?.name || "group"
@@ -46,6 +48,7 @@ exports.addExpense = async (req, res) => {
       });
     } else {
       await Activity.create({
+        owner: group.createdBy,   // ✅ owner of the group
         type: "EXPENSE_ADDED",
         message: `${paidBy} added "${description}" in ${
           group?.name || "group"
@@ -66,7 +69,7 @@ exports.addExpense = async (req, res) => {
   }
 };
 
-// GET GROUP EXPENSES
+// Get Expenses of a Group
 exports.getGroupExpenses = async (req, res) => {
   try {
     const { groupId } = req.params;

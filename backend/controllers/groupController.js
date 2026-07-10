@@ -1,5 +1,7 @@
 const Group = require("../models/Group");
 const Activity = require("../models/activity");
+const User = require("../models/user");
+
 exports.getGroupById = async (req, res) => {
   try {
     const { groupId } = req.params;
@@ -7,41 +9,45 @@ exports.getGroupById = async (req, res) => {
     const group = await Group.findById(groupId)
       .populate("expenses")
       .populate("members", "name email");
+
     if (!group) {
       return res.status(404).json({
-        message: "Group not found"
+        message: "Group not found",
       });
     }
 
     res.json(group);
-
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+
 exports.createGroup = async (req, res) => {
   try {
-
     const { name, members, createdBy } = req.body;
 
     const group = new Group({
       name,
       members,
-      createdBy
+      createdBy,
     });
 
     await group.save();
+
+    // ✅ Get creator's name
+    const creator = await User.findById(createdBy);
+
     await Activity.create({
-  user: createdBy,
-  type: "GROUP_CREATED",
-  message: `Group "${name}" created`,
-  groupId: group._id
-});
-    res.status(201).json({
-      message: "Group created successfully",
-      group
+      owner: createdBy,
+      type: "GROUP_CREATED",
+      message: `Group "${name}" created`,
+      groupId: group._id,
     });
 
+    res.status(201).json({
+      message: "Group created successfully",
+      group,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -49,17 +55,17 @@ exports.createGroup = async (req, res) => {
 
 exports.getUserGroups = async (req, res) => {
   try {
-
     const { userId } = req.params;
 
     const groups = await Group.find({
-      members: userId
-    }).populate("expenses").populate("members", "name email");;
+      members: userId,
+    })
+      .populate("expenses")
+      .populate("members", "name email");
 
     res.json({
-      groups
+      groups,
     });
-
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -67,7 +73,6 @@ exports.getUserGroups = async (req, res) => {
 
 exports.addMember = async (req, res) => {
   try {
-
     const { groupId } = req.params;
     const { userId } = req.body;
 
@@ -75,14 +80,13 @@ exports.addMember = async (req, res) => {
 
     if (!group) {
       return res.status(404).json({
-        message: "Group not found"
+        message: "Group not found",
       });
     }
 
-    // avoid duplicate members
     if (group.members.includes(userId)) {
       return res.status(400).json({
-        message: "User already in group"
+        message: "User already in group",
       });
     }
 
@@ -92,9 +96,8 @@ exports.addMember = async (req, res) => {
 
     res.json({
       message: "Member added successfully",
-      group
+      group,
     });
-
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
