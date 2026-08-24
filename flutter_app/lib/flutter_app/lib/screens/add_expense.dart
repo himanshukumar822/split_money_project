@@ -1,0 +1,397 @@
+// ignore_for_file: use_build_context_synchronously
+
+import 'package:flutter/material.dart';
+import 'package:split_money/screens/contact_screen.dart';
+import 'package:split_money/services/expense_services.dart';
+import 'package:split_money/providers/auth_provider.dart';
+import 'package:split_money/providers/group_provider.dart';
+import 'package:provider/provider.dart';
+
+class AddExpenseScreen extends StatefulWidget {
+  final String groupId;
+
+  const AddExpenseScreen({super.key, required this.groupId});
+
+  @override
+  State<AddExpenseScreen> createState() => _AddExpenseScreenState();
+}
+
+class _AddExpenseScreenState extends State<AddExpenseScreen> {
+  List<Map<String, dynamic>> members = [];
+
+  final ExpenseService expenseService = ExpenseService();
+  String? paidBy;
+
+  final TextEditingController descriptionController = TextEditingController();
+  final TextEditingController amountController = TextEditingController();
+
+  bool isEqualSplit = true;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
+    members = [
+      {"id": auth.name, "name": auth.name, "isYou": true},
+    ];
+
+    paidBy = auth.name;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[100],
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: const Text("Add Expense", style: TextStyle(color: Colors.black)),
+        iconTheme: const IconThemeData(color: Colors.black),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            /// 👥 MEMBERS
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: () async {
+                    final contact = await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ContactsScreen()),
+                    );
+
+                    if (contact != null) {
+                      setState(() {
+                        if (!members.any(
+                          (m) => m["name"] == contact.displayName,
+                        )) {
+                          members.add({
+                            "id": contact.displayName ?? "No Name", // temp id
+                            "name": contact.displayName ?? "No Name",
+                            "isYou": false,
+                          });
+                        }
+                      });
+                    }
+                  },
+                  child: Column(
+                    children: const [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor: Colors.black,
+                        child: Icon(Icons.add, color: Colors.white),
+                      ),
+                      SizedBox(height: 6),
+                      Text("Add Friends"),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: members.map((member) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 10),
+                          child: _memberChip(member),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            /// 📦 FORM
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  TextField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(labelText: "Description"),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  TextField(
+                    controller: amountController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: "Amount"),
+                    onChanged: (_) => setState(() {}),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  /// 👤 PAID BY
+                  DropdownButtonFormField<String>(
+                    value: paidBy,
+                    items: members.map<DropdownMenuItem<String>>((member) {
+                      return DropdownMenuItem<String>(
+                        value: member["id"], // ✅ userId
+                        child: Text(member["name"]), // UI name
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      setState(() {
+                        paidBy = val!;
+                      });
+                    },
+                    decoration: const InputDecoration(labelText: "Paid By"),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  /// 🔘 SPLIT TYPE
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() => isEqualSplit = true);
+                          },
+                          child: _splitButton("Equally", isEqualSplit),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() => isEqualSplit = false);
+                          },
+                          child: _splitButton("Unequally", !isEqualSplit),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  if (isEqualSplit) _buildEqualSplitUI(),
+
+                  const SizedBox(height: 20),
+
+                  /// 🚀 SUBMIT BUTTON
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.black,
+                    ),
+                    child: TextButton(
+                      onPressed: () async {
+                        try {
+                          final description = descriptionController.text;
+                          final amount =
+                              double.tryParse(amountController.text) ?? 0;
+
+                          if (description.isEmpty || amount <= 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Enter valid details"),
+                              ),
+                            );
+                            return;
+                          }
+
+                          final auth = Provider.of<AuthProvider>(
+                            context,
+                            listen: false,
+                          );
+
+                          final splitBetween = members
+                              .map((m) => m["id"])
+                              .toList();
+                          print("Paid By: $paidBy");
+                          print("Split Between: $splitBetween");
+
+                          if (members.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  "Please add at least one member.",
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+
+                          if (paidBy == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Please select who paid."),
+                              ),
+                            );
+                            return;
+                          }
+                          await expenseService.addExpense(
+                            description: description,
+                            amount: amount,
+                            paidBy: paidBy!, // ✅ userId
+                            splitBetween: splitBetween, // ✅ userIds
+                            token: auth.token,
+                            groupId: widget.groupId,
+                          );
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Expense added successfully"),
+                            ),
+                          );
+
+                          await Provider.of<GroupProvider>(
+                            context,
+                            listen: false,
+                          ).getGroups(auth.userId, auth.token);
+
+                          Navigator.pop(context);
+                        } catch (e) {
+                          print("Error: $e");
+                          ScaffoldMessenger.of(
+                            context,
+                          ).showSnackBar(SnackBar(content: Text("Error: $e")));
+                        }
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        child: Text(
+                          "Submit Expense",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _splitButton(String text, bool active) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      decoration: BoxDecoration(
+        color: active
+            ? const Color(0xFF5A67D8)
+            : const Color(0xFF5A67D8).withOpacity(0.5),
+        borderRadius: BorderRadius.circular(25),
+      ),
+      child: Center(
+        child: Text(text, style: const TextStyle(color: Colors.white)),
+      ),
+    );
+  }
+
+  Widget _buildEqualSplitUI() {
+    double total = double.tryParse(amountController.text) ?? 0;
+    int count = members.length;
+
+    double share = count > 0 ? total / count : 0;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Split Details",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          ...members.map((m) {
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [Text(m["name"]), Text("₹${share.toStringAsFixed(2)}")],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _memberChip(Map<String, dynamic> member) {
+    final name = member["name"] ?? "";
+
+    return Padding(
+      padding: const EdgeInsets.only(right: 10),
+      child: Column(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: Colors.grey[300],
+                child: Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : "?",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+
+              Positioned(
+                right: -2,
+                top: -2,
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      members.remove(member);
+
+                      // If removed member was selected in Paid By
+                      if (paidBy == member["id"]) {
+                        if (members.isNotEmpty) {
+                          paidBy = members.first["id"];
+                        } else {
+                          paidBy = null;
+                        }
+                      }
+                    });
+                  },
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(2),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 14,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 4),
+
+          SizedBox(
+            width: 65,
+            child: Text(
+              name,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

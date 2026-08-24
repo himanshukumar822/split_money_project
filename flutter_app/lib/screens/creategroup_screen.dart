@@ -15,6 +15,7 @@ class CreateGroupSheet extends StatefulWidget {
 
 class _CreateGroupSheetState extends State<CreateGroupSheet> {
   final TextEditingController _controller = TextEditingController();
+  bool _isCreating = false;
   String selectedType = "Home";
 
   final List<Map<String, dynamic>> groupTypes = [
@@ -153,50 +154,93 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
                           borderRadius: BorderRadius.circular(30),
                         ),
                       ),
-                      onPressed: () async {
-                        String groupName = _controller.text.trim();
+                      onPressed: _isCreating
+                          ? null
+                          : () async {
+                              final groupName = _controller.text.trim();
 
-                        if (groupName.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Please enter group name"),
-                            ),
-                          );
-                          return;
-                        }
-                        final auth = Provider.of<AuthProvider>(
-                          context,
-                          listen: false,
-                        );
-                        final groupProvider = Provider.of<GroupProvider>(
-                          context,
-                          listen: false,
-                        );
+                              if (groupName.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Please enter group name"),
+                                  ),
+                                );
+                                return;
+                              }
 
-                        String userId = auth.userId;
-                        String token = auth.token;
+                              setState(() {
+                                _isCreating = true;
+                              });
 
-                        print("Creating group with userId: $userId");
-                        final group = await groupProvider.addGroup(
-                          groupName,
-                          userId,
-                          token,
-                        );
+                              try {
+                                final auth = Provider.of<AuthProvider>(
+                                  context,
+                                  listen: false,
+                                );
 
-                        if (group != null) {
-                          Navigator.pop(context);
+                                final groupProvider =
+                                    Provider.of<GroupProvider>(
+                                      context,
+                                      listen: false,
+                                    );
 
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => AddExpenseScreen(
-                                groupId: group["_id"], // ✅ IMPORTANT
+                                final userId = auth.userId;
+                                final token = auth.token;
+
+                                print("Creating group with userId: $userId");
+
+                                final group = await groupProvider.addGroup(
+                                  groupName,
+                                  userId,
+                                  token,
+                                );
+
+                                if (!mounted) return;
+
+                                if (group != null) {
+                                  Navigator.pop(context);
+
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => AddExpenseScreen(
+                                        groupId: group["_id"],
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Failed to create group"),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (!mounted) return;
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text("Failed to create group: $e"),
+                                  ),
+                                );
+                              } finally {
+                                if (mounted) {
+                                  setState(() {
+                                    _isCreating = false;
+                                  });
+                                }
+                              }
+                            },
+                      child: _isCreating
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
                               ),
-                            ),
-                          );
-                        }
-                      },
-                      child: const Text("Create"),
+                            )
+                          : const Text("Create"),
                     ),
                   ],
                 ),

@@ -253,7 +253,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                             listen: false,
                           ).getGroups(auth.userId, auth.token);
 
-                          Navigator.pop(context);
+                          if (!mounted) {
+                            return Navigator.pop(context, true);
+                          }
                         } catch (e) {
                           print("Error: $e");
                           ScaffoldMessenger.of(

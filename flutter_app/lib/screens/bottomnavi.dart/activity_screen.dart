@@ -24,19 +24,13 @@ class _ActivityScreenState extends State<ActivityScreen> {
     fetchActivities();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    fetchActivities();
-  }
-
   Future<void> fetchActivities() async {
     try {
       final auth = Provider.of<AuthProvider>(context, listen: false);
 
       final response = await http.get(
         Uri.parse(
-          "http://192.168.31.142:5000/api/activity?owner=${auth.userId}",
+          "https://split-money-backend.onrender.com/api/activity?owner=${auth.userId}",
         ),
       );
 
