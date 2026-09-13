@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
@@ -33,10 +34,9 @@ class _GroupsScreenState extends State<GroupsScreen> {
       userId = auth.userId;
       token = auth.token;
 
-      print("USER NAME: ${auth.userName}"); // 🔥 DEBUG
+      print("USER NAME: ${auth.userName}");
 
       groupProvider.getGroups(userId, token);
-
       fetchSummary();
     });
   }
@@ -49,11 +49,11 @@ class _GroupsScreenState extends State<GroupsScreen> {
       final url =
           "https://split-money-backend.onrender.com/api/balances/summary/${auth.userName}";
 
-      print("CALLING API: $url"); // 🔥 DEBUG
+      print("CALLING API: $url");
 
       final response = await http.get(Uri.parse(url));
 
-      print("API RESPONSE: ${response.body}"); // 🔥 DEBUG
+      print("API RESPONSE: ${response.body}");
 
       final data = jsonDecode(response.body);
 
@@ -140,7 +140,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
             Expanded(
               child: Consumer<GroupProvider>(
                 builder: (context, provider, child) {
-                  if (provider.isLoading) {
+                  if (provider.isLoading && provider.groups.isEmpty) {
                     return const Center(child: CircularProgressIndicator());
                   }
 
@@ -189,7 +189,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
                             // 🔥 REFRESH AFTER RETURN
                             fetchSummary();
                           },
-                          child: _recentGroupItem(group.name),
+                          child: _recentGroupItem(group.name, group.groupType),
                         );
                       }),
                     ],
@@ -225,8 +225,40 @@ class _GroupsScreenState extends State<GroupsScreen> {
     );
   }
 
+  // ⭐ GET ICON FROM GROUP TYPE
+  IconData _getGroupIcon(String groupType) {
+    switch (groupType) {
+      case "Home":
+        return Icons.home;
+
+      case "Trip":
+        return Icons.luggage;
+
+      case "Couple":
+        return Icons.favorite;
+
+      case "Personal":
+        return Icons.person;
+
+      case "Business":
+        return Icons.work;
+
+      case "Office":
+        return Icons.apartment;
+
+      case "Sports":
+        return Icons.sports_tennis;
+
+      case "Others":
+        return Icons.group;
+
+      default:
+        return Icons.group;
+    }
+  }
+
   // 📦 Group Item
-  Widget _recentGroupItem(String name) {
+  Widget _recentGroupItem(String name, String groupType) {
     return Column(
       children: [
         Stack(
@@ -238,8 +270,9 @@ class _GroupsScreenState extends State<GroupsScreen> {
                 color: Colors.grey[200],
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(Icons.luggage),
+              child: Icon(_getGroupIcon(groupType)),
             ),
+
             Positioned(
               top: 4,
               right: 4,
@@ -254,7 +287,9 @@ class _GroupsScreenState extends State<GroupsScreen> {
             ),
           ],
         ),
+
         const SizedBox(height: 6),
+
         SizedBox(
           width: 70,
           child: Text(

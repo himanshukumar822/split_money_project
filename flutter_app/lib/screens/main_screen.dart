@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+
 import 'group_screen.dart';
 import 'package:split_money/screens/bottomnavi.dart/activity_screen.dart';
-//import 'package:split_money/screens/bottomnavi.dart/activity_screen.dart';
 import 'package:split_money/screens/bottomnavi.dart/friends_screen.dart';
 import 'package:split_money/screens/bottomnavi.dart/profile_screen.dart';
 
@@ -15,7 +15,7 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  late List<Widget> _screens; // 🔥 declare only
+  late List<Widget> _screens;
 
   @override
   void initState() {
@@ -28,6 +28,10 @@ class _MainScreenState extends State<MainScreen> {
       const ProfilePage(),
     ];
   }
+
+  // ---------------------------------------------------------
+  // TAB SELECTION
+  // ---------------------------------------------------------
 
   void _onTap(int index) {
     setState(() {
@@ -44,24 +48,31 @@ class _MainScreenState extends State<MainScreen> {
           setState(() {
             _selectedIndex = 0;
           });
+
           return false;
         }
+
         return true;
       },
+
       child: Scaffold(
         body: IndexedStack(index: _selectedIndex, children: _screens),
 
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: _selectedIndex,
           onTap: _onTap,
-          type: BottomNavigationBarType.fixed, // 🔥 IMPORTANT (for 4 tabs)
+          type: BottomNavigationBarType.fixed,
+
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.group), label: "Groups"),
+
             BottomNavigationBarItem(icon: Icon(Icons.people), label: "Friends"),
+
             BottomNavigationBarItem(
               icon: Icon(Icons.receipt_long),
               label: "Activity",
             ),
+
             BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
           ],
         ),

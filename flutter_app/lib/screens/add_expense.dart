@@ -1,5 +1,3 @@
-// ignore_for_file: use_build_context_synchronously
-
 import 'package:flutter/material.dart';
 import 'package:split_money/screens/contact_screen.dart';
 import 'package:split_money/services/expense_services.dart';
@@ -20,12 +18,17 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   List<Map<String, dynamic>> members = [];
 
   final ExpenseService expenseService = ExpenseService();
+
   String? paidBy;
 
   final TextEditingController descriptionController = TextEditingController();
+
   final TextEditingController amountController = TextEditingController();
 
   bool isEqualSplit = true;
+
+  // Prevents accidental double-tap submissions.
+  bool isSubmitting = false;
 
   @override
   void initState() {
@@ -38,6 +41,13 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     ];
 
     paidBy = auth.name;
+  }
+
+  @override
+  void dispose() {
+    descriptionController.dispose();
+    amountController.dispose();
+    super.dispose();
   }
 
   @override
@@ -54,30 +64,34 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            /// 👥 MEMBERS
+            // 👥 MEMBERS
             Row(
               children: [
                 GestureDetector(
-                  onTap: () async {
-                    final contact = await Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const ContactsScreen()),
-                    );
+                  onTap: isSubmitting
+                      ? null
+                      : () async {
+                          final contact = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ContactsScreen(),
+                            ),
+                          );
 
-                    if (contact != null) {
-                      setState(() {
-                        if (!members.any(
-                          (m) => m["name"] == contact.displayName,
-                        )) {
-                          members.add({
-                            "id": contact.displayName ?? "No Name", // temp id
-                            "name": contact.displayName ?? "No Name",
-                            "isYou": false,
-                          });
-                        }
-                      });
-                    }
-                  },
+                          if (contact != null && mounted) {
+                            setState(() {
+                              if (!members.any(
+                                (m) => m["name"] == contact.displayName,
+                              )) {
+                                members.add({
+                                  "id": contact.displayName ?? "No Name",
+                                  "name": contact.displayName ?? "No Name",
+                                  "isYou": false,
+                                });
+                              }
+                            });
+                          }
+                        },
                   child: Column(
                     children: const [
                       CircleAvatar(
@@ -109,7 +123,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
             const SizedBox(height: 20),
 
-            /// 📦 FORM
+            // 📦 FORM
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -120,6 +134,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 children: [
                   TextField(
                     controller: descriptionController,
+                    enabled: !isSubmitting,
                     decoration: const InputDecoration(labelText: "Description"),
                   ),
 
@@ -127,49 +142,66 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
                   TextField(
                     controller: amountController,
+                    enabled: !isSubmitting,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: "Amount"),
-                    onChanged: (_) => setState(() {}),
+                    onChanged: (_) {
+                      if (mounted) {
+                        setState(() {});
+                      }
+                    },
                   ),
 
                   const SizedBox(height: 16),
 
-                  /// 👤 PAID BY
+                  // 👤 PAID BY
                   DropdownButtonFormField<String>(
                     value: paidBy,
                     items: members.map<DropdownMenuItem<String>>((member) {
                       return DropdownMenuItem<String>(
-                        value: member["id"], // ✅ userId
-                        child: Text(member["name"]), // UI name
+                        value: member["id"],
+                        child: Text(member["name"]),
                       );
                     }).toList(),
-                    onChanged: (val) {
-                      setState(() {
-                        paidBy = val!;
-                      });
-                    },
+                    onChanged: isSubmitting
+                        ? null
+                        : (val) {
+                            if (val == null) return;
+
+                            setState(() {
+                              paidBy = val;
+                            });
+                          },
                     decoration: const InputDecoration(labelText: "Paid By"),
                   ),
 
                   const SizedBox(height: 20),
 
-                  /// 🔘 SPLIT TYPE
+                  // 🔘 SPLIT TYPE
                   Row(
                     children: [
                       Expanded(
                         child: GestureDetector(
-                          onTap: () {
-                            setState(() => isEqualSplit = true);
-                          },
+                          onTap: isSubmitting
+                              ? null
+                              : () {
+                                  setState(() {
+                                    isEqualSplit = true;
+                                  });
+                                },
                           child: _splitButton("Equally", isEqualSplit),
                         ),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: GestureDetector(
-                          onTap: () {
-                            setState(() => isEqualSplit = false);
-                          },
+                          onTap: isSubmitting
+                              ? null
+                              : () {
+                                  setState(() {
+                                    isEqualSplit = false;
+                                  });
+                                },
                           child: _splitButton("Unequally", !isEqualSplit),
                         ),
                       ),
@@ -180,95 +212,140 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
 
                   const SizedBox(height: 20),
 
-                  /// 🚀 SUBMIT BUTTON
+                  // 🚀 SUBMIT BUTTON
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
-                      color: Colors.black,
+                      color: isSubmitting ? Colors.grey : Colors.black,
                     ),
                     child: TextButton(
-                      onPressed: () async {
-                        try {
-                          final description = descriptionController.text;
-                          final amount =
-                              double.tryParse(amountController.text) ?? 0;
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              final description = descriptionController.text
+                                  .trim();
 
-                          if (description.isEmpty || amount <= 0) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Enter valid details"),
-                              ),
-                            );
-                            return;
-                          }
+                              final amount =
+                                  double.tryParse(
+                                    amountController.text.trim(),
+                                  ) ??
+                                  0;
 
-                          final auth = Provider.of<AuthProvider>(
-                            context,
-                            listen: false,
-                          );
+                              // Validate description and amount.
+                              if (description.isEmpty || amount <= 0) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Enter valid details"),
+                                  ),
+                                );
+                                return;
+                              }
 
-                          final splitBetween = members
-                              .map((m) => m["id"])
-                              .toList();
-                          print("Paid By: $paidBy");
-                          print("Split Between: $splitBetween");
+                              final auth = Provider.of<AuthProvider>(
+                                context,
+                                listen: false,
+                              );
 
-                          if (members.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  "Please add at least one member.",
+                              final splitBetween = members
+                                  .map((m) => m["id"])
+                                  .toList();
+
+                              print("Paid By: $paidBy");
+                              print("Split Between: $splitBetween");
+
+                              // Validate members.
+                              if (members.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "Please add at least one member.",
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              // Validate payer.
+                              if (paidBy == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Please select who paid."),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              // IMPORTANT:
+                              // Set this BEFORE the API request.
+                              // Any additional tap will now be ignored.
+                              if (mounted) {
+                                setState(() {
+                                  isSubmitting = true;
+                                });
+                              }
+
+                              try {
+                                await expenseService.addExpense(
+                                  description: description,
+                                  amount: amount,
+                                  paidBy: paidBy!,
+                                  splitBetween: splitBetween,
+                                  token: auth.token,
+                                  groupId: widget.groupId,
+                                );
+
+                                if (!mounted) return;
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Expense added successfully"),
+                                  ),
+                                );
+
+                                await Provider.of<GroupProvider>(
+                                  context,
+                                  listen: false,
+                                ).getGroups(auth.userId, auth.token);
+
+                                if (!mounted) return;
+
+                                // Close Add Expense screen
+                                // after successful submission.
+                                Navigator.pop(context, true);
+                              } catch (e) {
+                                print("Error: $e");
+
+                                if (!mounted) return;
+
+                                // Allow another attempt if
+                                // the request failed.
+                                setState(() {
+                                  isSubmitting = false;
+                                });
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("Error: $e")),
+                                );
+                              }
+                            },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        child: isSubmitting
+                            ? const SizedBox(
+                                height: 22,
+                                width: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
                                 ),
+                              )
+                            : const Text(
+                                "Submit Expense",
+                                style: TextStyle(color: Colors.white),
                               ),
-                            );
-                            return;
-                          }
-
-                          if (paidBy == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Please select who paid."),
-                              ),
-                            );
-                            return;
-                          }
-                          await expenseService.addExpense(
-                            description: description,
-                            amount: amount,
-                            paidBy: paidBy!, // ✅ userId
-                            splitBetween: splitBetween, // ✅ userIds
-                            token: auth.token,
-                            groupId: widget.groupId,
-                          );
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Expense added successfully"),
-                            ),
-                          );
-
-                          await Provider.of<GroupProvider>(
-                            context,
-                            listen: false,
-                          ).getGroups(auth.userId, auth.token);
-
-                          if (!mounted) {
-                            return Navigator.pop(context, true);
-                          }
-                        } catch (e) {
-                          print("Error: $e");
-                          ScaffoldMessenger.of(
-                            context,
-                          ).showSnackBar(SnackBar(content: Text("Error: $e")));
-                        }
-                      },
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 14),
-                        child: Text(
-                          "Submit Expense",
-                          style: TextStyle(color: Colors.white),
-                        ),
                       ),
                     ),
                   ),
@@ -297,10 +374,11 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   }
 
   Widget _buildEqualSplitUI() {
-    double total = double.tryParse(amountController.text) ?? 0;
-    int count = members.length;
+    final double total = double.tryParse(amountController.text) ?? 0;
 
-    double share = count > 0 ? total / count : 0;
+    final int count = members.length;
+
+    final double share = count > 0 ? total / count : 0;
 
     return Container(
       margin: const EdgeInsets.only(top: 20),
@@ -316,7 +394,9 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
             "Split Details",
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
+
           const SizedBox(height: 10),
+
           ...members.map((m) {
             return Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -351,20 +431,23 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
                 right: -2,
                 top: -2,
                 child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      members.remove(member);
+                  onTap: isSubmitting
+                      ? null
+                      : () {
+                          setState(() {
+                            members.remove(member);
 
-                      // If removed member was selected in Paid By
-                      if (paidBy == member["id"]) {
-                        if (members.isNotEmpty) {
-                          paidBy = members.first["id"];
-                        } else {
-                          paidBy = null;
-                        }
-                      }
-                    });
-                  },
+                            // If removed member was selected
+                            // in Paid By.
+                            if (paidBy == member["id"]) {
+                              if (members.isNotEmpty) {
+                                paidBy = members.first["id"];
+                              } else {
+                                paidBy = null;
+                              }
+                            }
+                          });
+                        },
                   child: Container(
                     decoration: const BoxDecoration(
                       color: Colors.red,

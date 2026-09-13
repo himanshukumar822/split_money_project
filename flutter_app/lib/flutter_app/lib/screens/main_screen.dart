@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'group_screen.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import 'package:split_money/screens/bottomnavi.dart/activity_screen.dart';
 //import 'package:split_money/screens/bottomnavi.dart/activity_screen.dart';
-import 'package:split_money/screens/bottomnavi.dart/friends_screen.dart';
+//import 'package:split_money/screens/bottomnavi.dart/friends_screen.dart';
 import 'package:split_money/screens/bottomnavi.dart/profile_screen.dart';
+import 'ai_chat_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -20,10 +23,11 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
+    final auth = context.read<AuthProvider>();
 
     _screens = [
       const GroupsScreen(),
-      const FriendsScreen(),
+      AIChatScreen(userId: auth.userId),
       const ActivityScreen(),
       const ProfilePage(),
     ];
@@ -57,7 +61,10 @@ class _MainScreenState extends State<MainScreen> {
           type: BottomNavigationBarType.fixed, // 🔥 IMPORTANT (for 4 tabs)
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.group), label: "Groups"),
-            BottomNavigationBarItem(icon: Icon(Icons.people), label: "Friends"),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.auto_awesome),
+              label: "Money AI",
+            ),
             BottomNavigationBarItem(
               icon: Icon(Icons.receipt_long),
               label: "Activity",

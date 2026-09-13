@@ -1,5 +1,3 @@
-// ignore_for_file: use_build_context_synchronously
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:split_money/screens/add_expense.dart';
@@ -15,7 +13,9 @@ class CreateGroupSheet extends StatefulWidget {
 
 class _CreateGroupSheetState extends State<CreateGroupSheet> {
   final TextEditingController _controller = TextEditingController();
+
   bool _isCreating = false;
+
   String selectedType = "Home";
 
   final List<Map<String, dynamic>> groupTypes = [
@@ -30,6 +30,12 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
   ];
 
   @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(
@@ -37,7 +43,6 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
       ),
       child: SafeArea(
         child: SingleChildScrollView(
-          // ✅ IMPORTANT FIX
           child: Container(
             padding: const EdgeInsets.all(20),
             decoration: const BoxDecoration(
@@ -69,9 +74,10 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
 
                 const SizedBox(height: 20),
 
-                // ✏️ Input
+                // ✏️ Group name
                 TextField(
                   controller: _controller,
+                  enabled: !_isCreating,
                   decoration: const InputDecoration(
                     labelText: "Group name",
                     border: UnderlineInputBorder(),
@@ -80,7 +86,7 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
 
                 const SizedBox(height: 20),
 
-                // 📦 Grid
+                // 📦 Group type grid
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -92,14 +98,17 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
                   ),
                   itemBuilder: (context, index) {
                     final item = groupTypes[index];
-                    final isSelected = selectedType == item["name"];
+
+                    final bool isSelected = selectedType == item["name"];
 
                     return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          selectedType = item["name"];
-                        });
-                      },
+                      onTap: _isCreating
+                          ? null
+                          : () {
+                              setState(() {
+                                selectedType = item["name"];
+                              });
+                            },
                       child: Column(
                         children: [
                           Container(
@@ -133,9 +142,11 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
                   children: [
                     // Cancel
                     TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
+                      onPressed: _isCreating
+                          ? null
+                          : () {
+                              Navigator.pop(context);
+                            },
                       child: const Text(
                         "Cancel",
                         style: TextStyle(fontSize: 16),
@@ -189,10 +200,15 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
 
                                 print("Creating group with userId: $userId");
 
+                                print(
+                                  "Creating group with type: $selectedType",
+                                );
+
                                 final group = await groupProvider.addGroup(
                                   groupName,
                                   userId,
                                   token,
+                                  groupType: selectedType,
                                 );
 
                                 if (!mounted) return;
