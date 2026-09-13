@@ -26,7 +26,120 @@ exports.chatWithAI = async (req, res) => {
       });
     }
 
-    // Get user's groups
+    const cleanMessage = message.trim();
+    const lowerMessage = cleanMessage.toLowerCase();
+
+    // --------------------------------------------------
+    // MONEY AI DOMAIN RESTRICTION
+    // --------------------------------------------------
+
+    const greetings = [
+      "hi",
+      "hello",
+      "hey",
+      "hii",
+      "hiii",
+      "good morning",
+      "good afternoon",
+      "good evening",
+      "good night",
+    ];
+
+    const isGreeting = greetings.includes(lowerMessage);
+
+    const moneyKeywords = [
+      "expense",
+      "expenses",
+      "spend",
+      "spending",
+      "spent",
+      "money",
+      "balance",
+      "balances",
+      "owe",
+      "owes",
+      "owed",
+      "debt",
+      "debts",
+      "settle",
+      "settlement",
+      "settlements",
+      "paid",
+      "pay",
+      "payment",
+      "payments",
+      "group",
+      "groups",
+      "friend",
+      "friends",
+      "split",
+      "splits",
+      "share",
+      "shares",
+      "transaction",
+      "transactions",
+      "bill",
+      "bills",
+      "cost",
+      "costs",
+      "app",
+      "account",
+      "spending",
+      "financial",
+      "finance",
+      "trip",
+      "roommate",
+      "roommates",
+    ];
+
+    const isMoneyRelated = moneyKeywords.some((keyword) =>
+      lowerMessage.includes(keyword)
+    );
+
+    // --------------------------------------------------
+    // HANDLE GREETINGS WITHOUT USING GEMINI
+    // --------------------------------------------------
+
+    if (isGreeting) {
+      const greetingReply =
+          "Hello! 👋 I'm Money AI. How can I help you with your expenses, balances, groups or settlements?";
+
+      await AIChat.create({
+        userId,
+        role: "user",
+        message: cleanMessage,
+      });
+
+      await AIChat.create({
+        userId,
+        role: "assistant",
+        message: greetingReply,
+      });
+
+      return res.json({
+        reply: greetingReply,
+      });
+    }
+
+    // --------------------------------------------------
+    // BLOCK UNRELATED QUESTIONS BEFORE GEMINI
+    // --------------------------------------------------
+
+    if (!isMoneyRelated) {
+      const restrictedReply =
+          "I'm Money AI, your Split Money assistant. 😊 I can help with your expenses, groups, balances, settlements, spending and other money-related questions.";
+
+      // We don't save unrelated questions because they are
+      // outside the purpose of Money AI.
+      return res.json({
+        reply: restrictedReply,
+      });
+    }
+
+    // --------------------------------------------------
+    // GET USER'S GROUPS
+    // --------------------------------------------------
+
     const groups = await Group.find({
       members: userId,
     });
@@ -39,14 +152,10 @@ exports.chatWithAI = async (req, res) => {
       });
 
       const balances =
-          balanceController.calculateBalances(
-            expenses
-          );
+        balanceController.calculateBalances(expenses);
 
       const transactions =
-          balanceController.splitMoney(
-            balances
-          );
+        balanceController.splitMoney(balances);
 
       groupData.push({
         groupName: group.name,
@@ -67,14 +176,20 @@ exports.chatWithAI = async (req, res) => {
       });
     }
 
-    // Save user's message
+    // --------------------------------------------------
+    // SAVE USER MESSAGE
+    // --------------------------------------------------
+
     await AIChat.create({
       userId,
       role: "user",
-      message: message.trim(),
+      message: cleanMessage,
     });
 
-    // Get previous AI conversation
+    // --------------------------------------------------
+    // GET PREVIOUS AI CONVERSATION
+    // --------------------------------------------------
+
     const previousChats = await AIChat.find({
       userId,
     })
@@ -84,23 +199,55 @@ exports.chatWithAI = async (req, res) => {
     // Reverse so oldest message comes first
     previousChats.reverse();
 
-    const conversationHistory =
-      previousChats
-        .map((chat) => {
-          return `${chat.role}: ${chat.message}`;
-        })
-        .join("\n");
+    const conversationHistory = previousChats
+      .map((chat) => {
+        return `${chat.role}: ${chat.message}`;
+      })
+      .join("\n");
+
+    // --------------------------------------------------
+    // GEMINI CONTEXT
+    // --------------------------------------------------
 
     const context = `
 You are Money AI, the intelligent financial assistant
 inside the Split Money app.
 
-You help the user understand their shared expenses,
-balances, settlements, groups and spending.
+Your purpose is ONLY to help the user with:
+- Shared expenses
+- Group expenses
+- Spending
+- Balances
+- Money owed
+- Debts
+- Settlements
+- Payments
+- Splitting bills
+- Friends and roommates
+- Financial information inside the Split Money app
+- Questions about using the Split Money app
 
-Be helpful, concise and clear.
+Do NOT answer general knowledge questions that are
+unrelated to Split Money or personal/shared finances.
+
+Do NOT answer questions about:
+- Cooking
+- Recipes
+- General programming
+- General education
+- Entertainment
+- Sports
+- Travel unrelated to expenses
+- General science
+- General trivia
+- Any other unrelated topic
+
+If a question is unrelated to Money AI's purpose,
+politely tell the user that you can only help with
+Split Money and money-related questions.
 
 Do not invent financial information.
+
 Only use the user's actual financial data provided below.
 
 USER'S GROUP DATA:
@@ -110,12 +257,19 @@ PREVIOUS MONEY AI CONVERSATION:
 ${conversationHistory}
 
 CURRENT USER MESSAGE:
-${message}
+${cleanMessage}
 
-Answer the current user message naturally.
-If the user asks about their expenses or balances,
-use the provided financial data.
+Answer the current user message naturally,
+concisely and clearly.
+
+If the user asks about their expenses, balances,
+groups, spending or settlements, use the provided
+financial data.
 `;
+
+    // --------------------------------------------------
+    // CALL GEMINI
+    // --------------------------------------------------
 
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
@@ -124,7 +278,10 @@ use the provided financial data.
 
     const reply = response.text;
 
-    // Save AI response
+    // --------------------------------------------------
+    // SAVE AI RESPONSE
+    // --------------------------------------------------
+
     await AIChat.create({
       userId,
       role: "assistant",
@@ -143,6 +300,10 @@ use the provided financial data.
     });
   }
 };
+
+// --------------------------------------------------
+// GET MONEY AI HISTORY
+// --------------------------------------------------
 
 exports.getChatHistory = async (req, res) => {
   try {

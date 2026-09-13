@@ -24,4 +24,10 @@ const aiChatSchema = new mongoose.Schema(
   }
 );
 
+// Automatically delete each chat message after 30 days
+aiChatSchema.index(
+  { createdAt: 1 },
+  { expireAfterSeconds: 60 * 60 * 24 * 30 }
+);
+
 module.exports = mongoose.model("AIChat", aiChatSchema);
