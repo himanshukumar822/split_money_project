@@ -67,7 +67,7 @@ exports.getUserGroups = async (req, res) => {
 
     const groups = await Group.find({
       members: userId,
-      isArchived: false,
+      isArchived: { $ne: true },
     })
       .populate("expenses")
       .populate("members", "name email");
@@ -116,7 +116,7 @@ exports.getArchivedGroups = async (req, res) => {
 
     const groups = await Group.find({
       members: userId,
-      isArchived: { $ne: true },
+      isArchived:  true ,
     })
       .populate("expenses")
       .populate("members", "name email")
