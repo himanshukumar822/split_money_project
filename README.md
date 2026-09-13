@@ -1,74 +1,70 @@
 # Split Money 💸
 
-Split Money is a Flutter-based expense sharing application inspired by Splitwise. It allows users to create groups, add expenses, calculate balances, settle payments, and track group activities with a simple and user-friendly interface.
-
----
+A full-stack expense-sharing application inspired by Splitwise.  
+Users can create groups, split expenses, track balances, settle payments, and manage shared expenses easily.
 
 ## ✨ Features
 
-- 🔐 User Authentication (Signup & Login)
-- 👥 Create and Manage Groups
-- ➕ Add Members to Groups
-- 💰 Add and Split Expenses
-- 📊 Automatic Balance Calculation
-- 🤝 Settle Up Feature
-- 📜 Activity History
-- 📱 Contact Picker Integration
-- ☁️ Backend deployed on Render
-- 🗄️ MongoDB Atlas Database
-
----
+- 🔐 Signup & Login with JWT authentication
+- 👥 Create groups and add members
+- 🏷️ Group types — Home, Travel, Sports, Others
+- 💰 Add and split expenses
+- 📊 Automatic balance calculation
+- 🤝 Settle Up
+- 📜 Activity history
+- 📱 Contact picker for adding members
+- 🗄️ Backup & Restore groups
+- 🤖 Money AI powered by Google Gemini
+- 💬 Persistent AI chat history
+- ⏳ AI chat history automatically expires after 30 days
 
 ## 🛠️ Tech Stack
 
-### Frontend
-- Flutter
-- Dart
+**Frontend**
+- Flutter & Dart
 - Provider
-- HTTP Package
+- HTTP
+- SharedPreferences
+- flutter_contacts
 
-### Backend
+**Backend**
 - Node.js
 - Express.js
 - MongoDB Atlas
 - Mongoose
-- JWT Authentication
+- JWT
+- bcrypt
 
-### Deployment
-- Render (Backend)
+**AI & Deployment**
+- Google Gemini API
+- Render
 - GitHub
 
----
+## 🏗️ Architecture
+
+```text
+Flutter
+   ↓
+Node.js + Express
+   ↓
+MongoDB Atlas
+   ↓
+Google Gemini API
+```
 
 ## 📂 Project Structure
 
-```
+```text
 split_money_project/
-│
 ├── backend/
-│   ├── config/
-│   ├── controllers/
-│   ├── models/
-│   ├── routes/
-│   ├── server.js
-│   └── package.json
-│
-└── flutter_app/
-    ├── lib/
-    ├── android/
-    ├── ios/
-    └── pubspec.yaml
+├── flutter_app/
+├── .gitignore
+├── README.md
+├── package.json
+└── package-lock.json
 ```
 
----
-
-## 🚀 Installation
-
-### Clone the repository
-
-```bash
-git clone https://github.com/himanshukumar822/split_money_project.git
-```
+## 🚀 Run Locally
 
 ### Backend
 
@@ -78,7 +74,7 @@ npm install
 npm start
 ```
 
-### Flutter App
+### Flutter
 
 ```bash
 cd flutter_app
@@ -86,29 +82,40 @@ flutter pub get
 flutter run
 ```
 
----
+### Environment Variables
+
+Create a `.env` file in the backend:
+
+```env
+PORT=5000
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret
+GEMINI_API_KEY=your_gemini_api_key
+```
+
+> Never commit `.env` or API keys to GitHub.
 
 ## 🌐 Backend
 
-Backend is deployed on Render.
+Production API:
 
-```
-https://split-money-backend.onrender.com
-```
+`https://split-money-backend.onrender.com`
 
-> **Note:** Since the backend is hosted on Render's free tier, the first request after inactivity may take a few seconds while the server wakes up.
+> Render free tier may take a few seconds to wake up after inactivity.
 
----
+## 📦 Android Build
 
-## 📱 APK
-
-Release APK can be generated using:
+### APK
 
 ```bash
 flutter build apk --release
 ```
 
----
+### Play Store AAB
+
+```bash
+flutter build appbundle --release
+```
 
 ## 🔮 Future Improvements
 
@@ -116,20 +123,10 @@ flutter build apk --release
 - Push Notifications
 - Expense Analytics
 - Multi-Currency Support
-- Profile Pictures
-- Dark Mode
 - Export Expenses to PDF
-
----
 
 ## 👨‍💻 Author
 
 **Himanshu Kumar**
 
 GitHub: https://github.com/himanshukumar822
-
----
-
-## 📄 License
-
-This project is developed for educational and learning purposes.
