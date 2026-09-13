@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../models/group_model.dart';
 import '../services/group_services.dart';
 
@@ -11,34 +12,64 @@ class GroupProvider with ChangeNotifier {
 
   final GroupServices _service = GroupServices();
 
-  // ✅ FIXED: add userId
-  Future<void> getGroups(String userId, String token) async {
-    _isLoading = true;
+  // ============================================================
+  // GET GROUPS
+  // ============================================================
+  void removeGroup(String groupId) {
+    _groups.removeWhere((group) => group.id == groupId);
     notifyListeners();
+  }
+
+  Future<void> getGroups(
+    String userId,
+    String token, {
+    bool showLoading = true,
+  }) async {
+    if (showLoading) {
+      _isLoading = true;
+      notifyListeners();
+    }
 
     try {
       final data = await _service.fetchGroups(userId, token);
 
-      print("Fetched groups: $data"); // ⭐ DEBUG
+      print("Fetched groups: $data");
 
       _groups = data.map((g) => Group.fromJson(g)).toList();
     } catch (e) {
-      print("ERROR FETCHING GROUPS: $e"); // ⭐ DEBUG
+      print("ERROR FETCHING GROUPS: $e");
     } finally {
-      _isLoading = false; // ⭐ VERY IMPORTANT
-      notifyListeners();
+      if (showLoading) {
+        _isLoading = false;
+        notifyListeners();
+      } else {
+        // Still update the UI with the new group list
+        notifyListeners();
+      }
     }
   }
 
-  // ✅ FIXED: add userId + fix response
-  Future<dynamic> addGroup(String name, String userId, String token) async {
+  // ============================================================
+  // ADD GROUP
+  // ============================================================
+
+  Future<dynamic> addGroup(
+    String name,
+    String userId,
+    String token, {
+    String groupType = "Home",
+  }) async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      final data = await _service.createGroup(name, userId, token);
+      final data = await _service.createGroup(
+        name,
+        userId,
+        token,
+        groupType: groupType,
+      );
 
-      // ⭐ FIXED (important)
       final newGroup = Group.fromJson(data["group"]);
 
       _groups.add(newGroup);
@@ -49,8 +80,10 @@ class GroupProvider with ChangeNotifier {
       return data["group"];
     } catch (e) {
       print(e);
+
       _isLoading = false;
       notifyListeners();
+
       return false;
     }
   }

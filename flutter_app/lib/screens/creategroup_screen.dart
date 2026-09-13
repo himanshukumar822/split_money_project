@@ -181,6 +181,7 @@ class _CreateGroupSheetState extends State<CreateGroupSheet> {
                           groupName,
                           userId,
                           token,
+                          groupType: selectedType,
                         );
 
                         if (group != null) {
