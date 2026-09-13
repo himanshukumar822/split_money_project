@@ -5,6 +5,7 @@ const groupRoutes = require("./routes/groupRoutes");
 const authRoutes = require("./routes/authRoutes");
 const expenseRoutes = require("./routes/expenseRoutes");
 const balanceRoutes = require("./routes/balanceRoutes");
+const aiRoutes = require("./routes/aiRoutes");
 const app = express();
 
 connectDB();
@@ -15,6 +16,7 @@ app.use("/api/groups", groupRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/expenses", expenseRoutes);
 app.use("/api/balances", balanceRoutes);
+app.use("/api/ai", aiRoutes);
 app.get("/", (req, res) => {
   res.send("Split Money API Running");
 });

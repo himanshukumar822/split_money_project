@@ -24,12 +24,18 @@ exports.getGroupById = async (req, res) => {
 
 exports.createGroup = async (req, res) => {
   try {
-    const { name, members, createdBy } = req.body;
+    const {
+      name,
+      members,
+      createdBy,
+      groupType, // ⭐ NEW
+    } = req.body;
 
     const group = new Group({
       name,
       members,
       createdBy,
+      groupType: groupType || "Home", // ⭐ NEW
     });
 
     await group.save();
