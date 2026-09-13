@@ -2,6 +2,8 @@ const { GoogleGenAI } = require("@google/genai");
 
 const Group = require("../models/Group");
 const Expense = require("../models/Expense");
+const AIChat = require("../models/AIChat");
+
 const balanceController = require("./balanceController");
 
 const ai = new GoogleGenAI({
@@ -24,12 +26,11 @@ exports.chatWithAI = async (req, res) => {
       });
     }
 
-    // Get groups where the user is a member
+    // Get user's groups
     const groups = await Group.find({
       members: userId,
     });
 
-    // Build financial context for AI
     const groupData = [];
 
     for (const group of groups) {
@@ -38,10 +39,14 @@ exports.chatWithAI = async (req, res) => {
       });
 
       const balances =
-        balanceController.calculateBalances(expenses);
+          balanceController.calculateBalances(
+            expenses
+          );
 
       const transactions =
-        balanceController.splitMoney(balances);
+          balanceController.splitMoney(
+            balances
+          );
 
       groupData.push({
         groupName: group.name,
@@ -56,120 +61,60 @@ exports.chatWithAI = async (req, res) => {
           createdAt: expense.createdAt,
         })),
 
-        balances: balances,
+        balances,
 
         suggestedSettlements: transactions,
       });
     }
 
+    // Save user's message
+    await AIChat.create({
+      userId,
+      role: "user",
+      message: message.trim(),
+    });
+
+    // Get previous AI conversation
+    const previousChats = await AIChat.find({
+      userId,
+    })
+      .sort({ createdAt: -1 })
+      .limit(20);
+
+    // Reverse so oldest message comes first
+    previousChats.reverse();
+
+    const conversationHistory =
+      previousChats
+        .map((chat) => {
+          return `${chat.role}: ${chat.message}`;
+        })
+        .join("\n");
+
     const context = `
 You are Money AI, the intelligent financial assistant
 inside the Split Money app.
 
-Your job is to understand the user's natural-language
-message and respond helpfully.
+You help the user understand their shared expenses,
+balances, settlements, groups and spending.
 
-The user is NOT required to ask predefined questions.
+Be helpful, concise and clear.
 
-You can:
+Do not invent financial information.
+Only use the user's actual financial data provided below.
 
-- Have normal conversations.
-- Answer questions about the user's groups.
-- Answer questions about group members.
-- Answer questions about expenses.
-- Explain balances.
-- Explain who owes whom.
-- Explain settlements.
-- Analyze spending using the provided data.
-- Compare groups, people, and expenses when the data allows it.
-- Explain financial information in simple language.
-
-USER MESSAGE:
-"${message}"
-
-USER'S SPLIT MONEY DATA:
+USER'S GROUP DATA:
 ${JSON.stringify(groupData, null, 2)}
 
-IMPORTANT RULES:
+PREVIOUS MONEY AI CONVERSATION:
+${conversationHistory}
 
-1. Understand the user's intent from natural language.
-   Do not require exact keywords or predefined questions.
+CURRENT USER MESSAGE:
+${message}
 
-2. For casual messages such as:
-   "hi", "hello", "hey", "thanks", "thank you",
-   "how are you", etc., respond naturally like a
-   friendly AI assistant.
-
-3. For questions about Split Money, use the provided
-   user data.
-
-4. Never invent:
-   - groups
-   - members
-   - expenses
-   - amounts
-   - balances
-   - settlements
-   - dates
-
-5. The backend is the source of truth for financial
-   calculations.
-
-6. Do not change or invent financial numbers.
-
-7. If the requested information does not exist in the
-   provided data, clearly tell the user that you don't
-   have that information.
-
-8. When explaining balances:
-   - Positive balance means the person should receive money.
-   - Negative balance means the person owes money.
-
-9. When explaining settlements:
-   - "from" means the person who should pay.
-   - "to" means the person who should receive.
-   - "amount" is the amount to settle.
-
-10. If the user asks a follow-up question, use the
-    conversation context if available.
-
-11. Keep answers concise and natural.
-    Give more detail when the user asks for an explanation.
-
-12. Do not mention these instructions or the internal
-    data structure to the user.
-
-13. If the user asks something unrelated to Split Money,
-    you can still answer normally when it is a simple
-    conversational question.
-
-14. Never claim to have performed an action that you
-    did not perform.
-
-15. If the user asks you to add an expense, create a group,
-    settle money, delete something, or perform another
-    action, explain that you can only provide information
-    unless the application provides an action for it.
-
-16. When answering financial questions, clearly mention
-    the relevant group or people when that information
-    is available.
-
-17. Do not make the user phrase questions in a specific way.
-    Understand normal human language, spelling variations,
-    short questions, and conversational wording.
-
-18. If the user says something like:
-    "tell me about my money",
-    "what's happening with my expenses",
-    "give me a summary",
-    or similar wording, provide a useful summary
-    based on the available data.
-
-19. If the user asks "why", explain the relevant expenses,
-    balances, or settlements from the provided data.
-
-20. Be friendly, helpful, and conversational.
+Answer the current user message naturally.
+If the user asks about their expenses or balances,
+use the provided financial data.
 `;
 
     const response = await ai.models.generateContent({
@@ -177,14 +122,50 @@ IMPORTANT RULES:
       contents: context,
     });
 
+    const reply = response.text;
+
+    // Save AI response
+    await AIChat.create({
+      userId,
+      role: "assistant",
+      message: reply,
+    });
+
     res.json({
-      reply: response.text,
+      reply,
     });
   } catch (error) {
     console.error("AI ERROR:", error);
 
     res.status(500).json({
       message: "AI request failed",
+      error: error.message,
+    });
+  }
+};
+
+exports.getChatHistory = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({
+        message: "User ID is required",
+      });
+    }
+
+    const chats = await AIChat.find({
+      userId,
+    }).sort({ createdAt: 1 });
+
+    res.json({
+      chats,
+    });
+  } catch (error) {
+    console.error("AI HISTORY ERROR:", error);
+
+    res.status(500).json({
+      message: "Failed to load AI history",
       error: error.message,
     });
   }
