@@ -1,7 +1,6 @@
 class Group {
   final String id;
   final String name;
-  final String groupType;
   final List<dynamic> members;
   final List<dynamic> expenses;
   final List<dynamic> balances;
@@ -9,7 +8,6 @@ class Group {
   Group({
     required this.id,
     required this.name,
-    required this.groupType,
     required this.members,
     required this.expenses,
     required this.balances,
@@ -17,23 +15,11 @@ class Group {
 
   factory Group.fromJson(Map<String, dynamic> json) {
     return Group(
-      id: json['_id'] ?? '',
+      id: json['_id'],
       name: json['name'] ?? '',
-      groupType: json['groupType'] ?? 'Home',
       members: json['members'] ?? [],
       expenses: json['expenses'] ?? [],
       balances: json['balances'] ?? [],
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      '_id': id,
-      'name': name,
-      'groupType': groupType,
-      'members': members,
-      'expenses': expenses,
-      'balances': balances,
-    };
   }
 }

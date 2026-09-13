@@ -4,12 +4,10 @@ import 'package:http/http.dart' as http;
 class GroupServices {
   final String baseurl = "https://split-money-backend.onrender.com/api";
 
-  // ✅ GET GROUPS
+  // ✅ GET GROUPS (FIXED)
   Future<List<dynamic>> fetchGroups(String userId, String token) async {
     final url = Uri.parse("$baseurl/groups/$userId");
-
     print("✅ CALLING: $url");
-
     final response = await http.get(
       url,
       headers: {
@@ -21,6 +19,7 @@ class GroupServices {
     print("STATUS CODE: ${response.statusCode}");
     print("RAW RESPONSE: ${response.body}");
 
+    // 🔥 CHECK BEFORE DECODING
     if (response.body.startsWith("<!DOCTYPE html>")) {
       throw Exception("❌ Wrong API URL or backend route not found");
     }
@@ -33,27 +32,24 @@ class GroupServices {
     }
   }
 
-  // ✅ CREATE GROUP
+  // ✅ CREATE GROUP (FIXED)
   Future<Map<String, dynamic>> createGroup(
     String name,
     String userId,
-    String token, {
-    String groupType = "Home",
-  }) async {
+    String token,
+  ) async {
     final response = await http.post(
       Uri.parse("$baseurl/groups/create"),
       headers: {
         "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
+        "Authorization": "Bearer $token", // ok even if unused
       },
       body: jsonEncode({
         "name": name,
-        "members": [userId],
-        "createdBy": userId,
-        "groupType": groupType, // ⭐ NEW
+        "members": [userId], // ⭐ REQUIRED
+        "createdBy": userId, // ⭐ REQUIRED
       }),
     );
-
     print("Status Code: ${response.statusCode}");
     print("Create Group Response: ${response.body}");
 
