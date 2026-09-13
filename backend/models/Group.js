@@ -7,7 +7,7 @@ const groupSchema = new mongoose.Schema(
       required: true,
     },
 
-    // ⭐ Group type selected when creating the group
+    // Group type selected when creating the group
     groupType: {
       type: String,
       default: "Home",
@@ -31,8 +31,21 @@ const groupSchema = new mongoose.Schema(
         ref: "Expense",
       },
     ],
+
+    // ⭐ Backup / Archive
+    isArchived: {
+      type: Boolean,
+      default: false,
+    },
+
+    archivedAt: {
+      type: Date,
+      default: null,
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
 module.exports = mongoose.model("Group", groupSchema);
